@@ -1,18 +1,18 @@
 // Logger utility for YouTube Extension
-const logger = {
-	log(msg, level) {
+export const logger = {
+	log(msg: string, level: string) {
 		console.log(`[YouTube Extension] ${level}: ${msg}`);
 	},
-	info(msg) {
+	info(msg: string) {
 		this.log(msg, "INFO");
 	},
-	warn(msg) {
+	warn(msg: string) {
 		this.log(msg, "WARN");
 	},
-	error(msg) {
+	error(msg: string) {
 		this.log(msg, "ERROR");
 	},
-	debug(msg) {
+	debug(msg: string) {
 		this.log(msg, "DEBUG");
 	},
 };
