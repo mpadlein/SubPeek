@@ -5,7 +5,7 @@ import "./youtube/style.scss";
 
 export default defineContentScript({
 	matches: ["https://www.youtube.com/*", "https://youtube.com/*"],
-	runAt: "document_start",
+	runAt: "document_end",
 
 	main() {
 		runObserver();

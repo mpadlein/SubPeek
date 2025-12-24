@@ -1,14 +1,19 @@
 import { getVideoInfo } from "./api";
 import { VideoInfoContainer } from "./components";
+import { metricsProxy } from "./debugging";
+import { getVideoIdFromUrl } from "./utils";
+import { createVideoCardObj, getVideoCardRoot } from "./videoCard";
+
 export interface CaptionTrack {
 	languageCode: string;
-	name?: string;
+	name: string;
 	auto: boolean;
+	url: string;
 }
 
 export interface AudioTrack {
 	languageCode: string;
-	name?: string;
+	name: string;
 	origin: boolean;
 }
 
@@ -17,168 +22,75 @@ export interface VideoInfo {
 	audioTracks: AudioTrack[];
 }
 
-abstract class AbstractVideoCard {
-	static readonly TagName: string;
-	container: HTMLElement;
-	captionCodesContainer: VideoInfoContainer;
-
-	constructor(container: HTMLElement) {
-		this.container = container;
-
-		this.container.querySelector(".vid_info-container")?.remove();
-		this.captionCodesContainer = new VideoInfoContainer();
-	}
-
-	getVideoUrl() {
-		let e: HTMLAnchorElement | null =
-			this.container.querySelector("a#thumbnail");
-
-		if (!e) {
-			e = this.container.querySelector("a[href^='/watch?v=']");
-		}
-		if (!e) {
-			throw new Error("Could not find thumbnail element");
-		}
-		return e.href;
-	}
-
-	renderCaptionsData(data: VideoInfo) {
-		data.captions = data.captions.filter((track) => !track.auto);
-		data.audioTracks = data.audioTracks.filter((track) => !track.origin);
-		this.captionCodesContainer.setData(data);
-	}
-
-	abstract insertCaptionsData(element: HTMLElement): void;
-
-	// insertCaptionsDataInThumbImg(element: HTMLElement) {
-	// 	const img = this.container.querySelector(
-	// 		"img"
-	// 		// 'img[src^="https://i.ytimg.com/"]'
-	// 	);
-	// 	// make "element" appear in top left corner of "img"
-	// 	if (img) {
-	// 		// const container = document.createElement("div");
-	// 		// container.style.position = "absolute";
-	// 		// container.style.top = "0";
-	// 		// container.style.left = "0";
-	// 		// container.appendChild(element);
-	// 		const anchor: HTMLElement = this.container.querySelector(
-	// 			"a[href^='/watch?v=']"
-	// 		);
-	// 		if (!anchor) return;
-	// 		anchor.appendChild(element);
-	// 		anchor.style.display = "block";
-	// 	} else {
-	// 		console.log("Cannot find img for element", this.container);
-	// 	}
-	// }
-}
-
-class ChannelVideoCard extends AbstractVideoCard {
-	static readonly TagName: string = "ytd-rich-item-renderer";
-
-	async insertCaptionsData(element: HTMLElement) {
-		const dismissible = this.container.querySelector("#dismissible");
-		if (dismissible) {
-			const metadataSection =
-				dismissible.querySelector("#details, #meta");
-			if (metadataSection) {
-				dismissible.insertBefore(element, metadataSection);
-			} else {
-				dismissible.appendChild(element);
-			}
-		} else {
-			console.error("Could not find dismissible element");
-		}
-	}
-}
-
-class ChannelHomeVideoCard extends ChannelVideoCard {
-	static readonly TagName: string = "ytd-grid-video-renderer";
-}
-
-class SearchResultVideoCard extends AbstractVideoCard {
-	static readonly TagName: string = "ytd-video-renderer";
-
-	async insertCaptionsData(element: HTMLElement) {
-		const dismissible = this.container.querySelector("#dismissible");
-		if (dismissible) {
-			const metadataSection =
-				dismissible.querySelector("#details, #meta");
-			metadataSection?.appendChild(element);
-		} else {
-			console.error("Could not find dismissible element");
-		}
-	}
-}
-
-class WatchPageVideoCard extends AbstractVideoCard {
-	static readonly TagName: string = "yt-lockup-view-model";
-
-	async insertCaptionsData(element: HTMLElement) {
-		const target = this.container.querySelector(
-			".yt-lockup-metadata-view-model__text-container"
+async function handleVideoCardVisible(element: HTMLElement) {
+	const videoCard = createVideoCardObj(element);
+	if (!videoCard) {
+		logger.error(
+			"Could not find video card class for element",
+			element.tagName,
+			element
 		);
-		target?.appendChild(element);
+		return;
 	}
+	const videoUrl = videoCard.getVideoUrl();
+	videoCard.insertCaptionsDataTest(videoCard.captionCodesContainer.root);
+	getVideoInfo(videoUrl).then((data) => {
+		videoCard.renderCaptionsData(data);
+	});
 }
-const videoCardClasses = [
-	ChannelVideoCard,
-	ChannelHomeVideoCard,
-	SearchResultVideoCard,
-	WatchPageVideoCard,
-];
-function getVideoIdFromUrl(url: string): string | null {
-	const urlObj = new URL(url);
-	return urlObj.searchParams.get("v");
-}
-async function handleLink(link: HTMLAnchorElement) {
-	if (!link.getAttribute("href")?.startsWith("/watch?")) return;
 
-	let videoCard: AbstractVideoCard;
-	for (const VideoCard of videoCardClasses) {
-		let parent: HTMLElement | null = link.closest(VideoCard.TagName);
-		if (parent) {
-			const videoId = getVideoIdFromUrl(link.href);
-			if (!videoId) return;
-
-			if (parent.dataset.video_id == videoId) return;
-			parent.dataset.video_id = videoId;
-
-			videoCard = new VideoCard(parent as HTMLElement);
-			const videoUrl = link.href;
-			videoCard.insertCaptionsData(videoCard.captionCodesContainer.root);
-			// videoCard.insertCaptionsDataInThumbImg(
-			// 	videoCard.captionCodesContainer.root
-			// );
-			getVideoInfo(videoUrl).then((data) => {
-				videoCard.renderCaptionsData(data);
-			});
-			break;
+let itsCount = 0;
+const intersectionObserver = new IntersectionObserver((entries) => {
+	for (const entry of entries) {
+		if (entry.isIntersecting) {
+			itsCount++;
+			const link = entry.target as HTMLAnchorElement;
+			handleVideoCardVisible(link);
+			metricsProxy.itsOsv++;
+			console.log(`Intersecting ${itsCount}`, entry);
+			intersectionObserver.unobserve(entry.target);
 		}
 	}
+});
+
+async function handleObserverMatch(anchor: HTMLAnchorElement) {
+	if (!anchor.getAttribute("href")?.startsWith("/watch?")) return;
+	if (anchor.closest("h3,h4")) return;
+	const videoCardRoot = getVideoCardRoot(anchor);
+	if (!videoCardRoot) return;
+
+	// for case multiple anchor elements in the same video card
+	const videoId = getVideoIdFromUrl(anchor.href);
+	if (!videoId) return;
+	if (videoCardRoot.dataset.video_id == videoId) return;
+	videoCardRoot.dataset.video_id = videoId;
+
+	metricsProxy.itsOsvMatch++;
+	intersectionObserver.observe(videoCardRoot);
+	videoCardRoot.style.border = "2px solid red";
+	videoCardRoot.style.boxSizing = "border-box";
 }
 
 const observer = new MutationObserver((mutations) => {
 	for (const mutation of mutations) {
-		// Case 1: The href attribute was modified
 		if (
 			mutation.type === "attributes" &&
 			mutation.target.nodeName === "A"
 		) {
-			handleLink(mutation.target as HTMLAnchorElement);
+			handleObserverMatch(mutation.target as HTMLAnchorElement);
 		}
 
-		// Case 2: New elements were added to the DOM
 		if (mutation.type === "childList") {
 			mutation.addedNodes.forEach((node) => {
 				if (node.nodeType !== Node.ELEMENT_NODE) {
 					return;
 				}
 				let element = node as HTMLElement;
-				element.querySelectorAll?.("a").forEach(handleLink);
+				element.querySelectorAll?.("a").forEach((e) => {
+					handleObserverMatch(e);
+				});
 				if (element.nodeName === "A") {
-					handleLink(element as HTMLAnchorElement);
+					handleObserverMatch(element as HTMLAnchorElement);
 				}
 			});
 		}
@@ -191,5 +103,14 @@ export function runObserver() {
 		attributes: true,
 		subtree: true,
 		attributeFilter: ["href"],
+	});
+}
+
+export function reRenderBadges() {
+	const elements = document.querySelectorAll(".vid_info-container");
+	elements.forEach((element) => {
+		const videoInfoContainer: VideoInfoContainer = (element as any)
+			._videoInfoContainer;
+		videoInfoContainer.reRender();
 	});
 }
