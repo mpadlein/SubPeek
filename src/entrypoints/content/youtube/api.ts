@@ -1,100 +1,162 @@
-import { logger } from "@/utils/logger";
+import { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
 import { VIDEO_CACHE_TIMEOUT } from "@/utils/config";
-import { VideoInfo, CaptionTrack, AudioTrack } from ".";
-import { getVideoIdFromUrl } from "./utils";
-import { videoInfoCacheManager } from "./db";
+import { logger } from "@/utils/logger";
+import { extractVideoId } from "./utils";
+// import { videoCache } from "./cache";
+import { EXTENSION_EVENTS } from "@/common/constants";
+import pLimit from "p-limit";
 import { metricsProxy } from "./debugging";
 
-function htmlToVideoInfo(html: string): VideoInfo {
-	const regex = /var ytInitialPlayerResponse\s*=\s*(\{.+?\});/s;
-	const match = html.match(regex);
-	if (!match) {
-		logger.error("Could not find ytInitialPlayerResponse", html);
-		return { captions: [], audioTracks: [] };
-	}
+function parseVideoResponse(html: string): VideoInfo {
+    const regex = /var ytInitialPlayerResponse\s*=\s*(\{.+?\});/s;
+    const match = html.match(regex);
 
-	const rawData = JSON.parse(match[1]);
+    if (!match) {
+        logger.error("Could not find ytInitialPlayerResponse");
+        return { captions: [], audioTracks: [] };
+    }
 
-	const captions: CaptionTrack[] =
-		rawData.captions?.playerCaptionsTracklistRenderer?.captionTracks?.map(
-			(track: any) => ({
-				languageCode: track.languageCode,
-				name: track.name?.simpleText,
-				auto: track.kind === "asr",
-				url: track.baseUrl,
-			})
-		) || [];
+    const rawData = JSON.parse(match[1]);
 
-	let audioTracks: AudioTrack[] =
-		rawData.streamingData?.adaptiveFormats?.map((item: any) => {
-			const _id = item.audioTrack?.id;
-			const lastDot = _id?.lastIndexOf(".");
-			const languageCode = _id?.substring(0, lastDot);
-			const name: string = item.audioTrack?.displayName;
-			const origin = name?.endsWith("original");
-			return {
-				languageCode,
-				name,
-				origin,
-			};
-		}) || [];
-	audioTracks = audioTracks.filter(
-		(track) => track.name && track.languageCode
-	);
+    // Extract caption tracks
+    const captions: CaptionTrack[] =
+        rawData.captions?.playerCaptionsTracklistRenderer?.captionTracks?.map(
+            (track: any) => ({
+                languageCode: track.languageCode,
+                name: track.name?.simpleText,
+                auto: track.kind === "asr",
+                url: track.baseUrl,
+            }),
+        ) || [];
 
-	// unique audio tracks by name
-	const _map = new Map(audioTracks.map((t) => [t.name, t]));
-	audioTracks = Array.from(_map.values());
+    // Extract audio tracks
+    let audioTracks: AudioTrack[] =
+        rawData.streamingData?.adaptiveFormats
+            ?.map((item: any) => {
+                const id = item.audioTrack?.id;
+                if (!id) return null;
 
-	return { captions, audioTracks };
+                const lastDot = id.lastIndexOf(".");
+                const languageCode = id.substring(0, lastDot);
+                const name: string = item.audioTrack?.displayName;
+                const origin = name?.endsWith("original");
+
+                return { languageCode, name, origin };
+            })
+            .filter((t: any) => t?.name && t?.languageCode) || [];
+
+    // Deduplicate audio tracks by name
+    const uniqueAudioMap = new Map(audioTracks.map((t) => [t.name, t]));
+    audioTracks = Array.from(uniqueAudioMap.values());
+
+    return { captions, audioTracks };
 }
 
-// Clean expired cache entries on load
-videoInfoCacheManager.cleanExpired();
-
-export async function getVideoInfo(url: string): Promise<VideoInfo> {
-	const videoId = getVideoIdFromUrl(url);
-	if (!videoId) {
-		logger.warn("Could not extract video ID from URL: " + url);
-		return { captions: [], audioTracks: [] };
-	}
-
-	const now = Date.now() / 1000;
-
-	// Try to get from cache
-	try {
-		const cacheEntry = await videoInfoCacheManager.get(videoId);
-		if (cacheEntry) {
-			const { data, timestamp } = cacheEntry;
-			if (now - timestamp < VIDEO_CACHE_TIMEOUT) {
-				const remainCacheTime = VIDEO_CACHE_TIMEOUT - (now - timestamp);
-				metricsProxy.cacheHit++;
-				logger.debug(
-					`Cache hit for video: ${videoId} (${remainCacheTime} seconds left)`
-				);
-				return data;
-			}
-			metricsProxy.cacheExpired++;
-			logger.debug(`Cache expired for video: ${videoId}`);
-		}
-	} catch (e: any) {
-		logger.error("Cache read error: " + e.message);
-	}
-
-	// Fetch fresh data
-	const resp = await fetch(url);
-	const html = await resp.text();
-	metricsProxy.fetch++;
-
-	const data = htmlToVideoInfo(html);
-
-	// Save to cache
-	try {
-		await videoInfoCacheManager.set(videoId, data);
-		logger.debug(`Cached video info: ${videoId}`);
-	} catch (e: any) {
-		logger.error("Cache write error: " + e.message);
-	}
-
-	return data;
+function getCache(videoId: string): Promise<VideoInfo | null> {
+    const now = Date.now() / 1000;
+    return new Promise((resolve, reject) => {
+        browser.runtime.sendMessage(
+            {
+                event: EXTENSION_EVENTS.getCacheVideoInfo,
+                data: {
+                    videoId,
+                },
+            },
+            (response) => {
+                if (response.videoId === videoId) {
+                    if (response.cacheData) {
+                        const { data, timestamp } = response.cacheData;
+                        const age = now - timestamp;
+                        if (age < VIDEO_CACHE_TIMEOUT) {
+                            metricsProxy.cacheHit++;
+                            resolve(data);
+                            return;
+                        }
+                        metricsProxy.cacheExpired++;
+                    }
+                }
+                resolve(null);
+            },
+        );
+    });
 }
+
+function saveCache(videoId: string, data: VideoInfo): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        browser.runtime.sendMessage(
+            {
+                event: EXTENSION_EVENTS.setCacheVideoInfo,
+                data: {
+                    videoId,
+                    data,
+                },
+            },
+            (response) => {
+                if (response) {
+                    resolve(response.data);
+                }
+            },
+        );
+    });
+}
+
+const fetchLimit = pLimit(4);
+async function fetchData(url: string) {
+    const now = Date.now();
+    const html = await fetchLimit(async () => {
+        const response = await fetch(url);
+        const html = await response.text();
+
+        // await sleep(1000);
+        return html;
+    });
+    metricsProxy.fetch++;
+    const data = parseVideoResponse(html);
+    const t3 = Date.now() - now;
+    console.log("fetchData time", t3);
+    return data;
+}
+
+export async function resolveVideoInfo(url: string): Promise<VideoInfo> {
+    // await sleep(500);
+    return new Promise(async (resolve, reject) => {
+        const videoId = extractVideoId(url);
+        if (!videoId) {
+            logger.warn("Could not extract video ID from URL: " + url);
+            resolve({ captions: [], audioTracks: [] });
+            return;
+        }
+
+        let cacheData = await getCache(videoId);
+        if (cacheData) {
+            resolve(cacheData);
+            return;
+        }
+
+        // Fetch fresh data
+        const data = await fetchData(url);
+
+        data.captions.forEach((item) => {
+            const { languageCode, name } = item;
+            const k = `languageCode:cc:${languageCode}:${name}`;
+            browser.storage.local.set({ [k]: { languageCode, name } });
+        });
+        data.audioTracks.forEach((item) => {
+            const { languageCode, name } = item;
+            const k = `languageCode:audio:${languageCode}:${name}`;
+            browser.storage.local.set({ [k]: { languageCode, name } });
+        });
+
+        resolve(data);
+
+        // Update cache
+        try {
+            await saveCache(videoId, data);
+        } catch (error) {
+            logger.error("Cache write error:", error);
+        }
+    });
+}
+
+// // Clean expired cache on module load
+// videoCache.cleanExpired();

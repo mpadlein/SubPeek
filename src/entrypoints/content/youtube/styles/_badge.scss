@@ -1,0 +1,93 @@
+@use "variables" as *;
+@use "animations";
+
+// Badge Container
+.#{$prefix}-embed-container {
+    width: fit-content;
+    margin-top: $spacing-xs;
+    box-sizing: border-box;
+    animation: #{$prefix}-fadeIn 0.5s ease-out;
+    cursor: pointer;
+    transition: background $transition-normal;
+    user-select: none;
+    position: relative;
+}
+
+// Badge Section (CC or Audio row)
+.#{$prefix}-item {
+    display: flex;
+    gap: $spacing-xs;
+    padding: $spacing-xs 10px;
+    background: $bg-item;
+
+    &:first-child {
+        border-top-left-radius: $radius-md;
+        border-top-right-radius: $radius-md;
+    }
+
+    &:last-child {
+        border-bottom-left-radius: $radius-md;
+        border-bottom-right-radius: $radius-md;
+    }
+
+    &:not(:first-child) {
+        border-top: 1px solid $border-light;
+    }
+
+    &:hover {
+        background: $bg-hover-strong;
+    }
+}
+
+// Icon container
+.#{$prefix}-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: $color-text;
+}
+
+// Badges wrapper
+.#{$prefix}-badges {
+    display: flex;
+    flex-wrap: wrap;
+    padding-left: $spacing-xs;
+    gap: $spacing-xs;
+}
+
+// Individual badge
+.#{$prefix}-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 400;
+    font-family: $font-stack;
+    color: $color-primary;
+    padding: 2px 6px;
+    border: 1px solid $border-badge;
+    border-radius: $radius-sm;
+
+    // Muted state (no items)
+    &--muted {
+        color: $color-text-dark;
+        border-color: rgba(136, 136, 136, 0.3);
+    }
+
+    // More items indicator
+    &--more {
+        color: $color-text-muted;
+        border-color: transparent;
+        background: $bg-item;
+    }
+}
+
+// Loading state elements (placed inside badges container)
+.#{$prefix}-loading__spinner {
+    margin-left: 4px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid $border-light;
+    border-top-color: $color-primary;
+    border-radius: $radius-full;
+    animation: ytbext-spin 1.2s linear infinite;
+}

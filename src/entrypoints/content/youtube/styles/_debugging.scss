@@ -1,0 +1,21 @@
+@use "variables" as *;
+
+#ytb-debugging {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 9999;
+	background: rgb(16, 16, 16);
+	color: #fff;
+	padding: 10px;
+	font-size: 14px;
+	font-weight: 400;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	table {
+		border-collapse: collapse;
+		td {
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			padding: 4px 8px;
+		}
+	}
+}

@@ -1,0 +1,206 @@
+@use "variables" as *;
+@use "animations";
+
+// Track Popup
+.#{$prefix}-popup {
+    background: $bg-dark;
+    border: 1px solid $border-light;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-popup;
+    min-width: 200px;
+    max-width: 400px;
+    max-height: 300px;
+    overflow: hidden;
+    overflow-x: hidden;
+    z-index: $z-popup;
+    position: fixed;
+
+    // Position modifiers (animations only, positioning handled by JS)
+    &.is-bottom {
+        animation: #{$prefix}-slideUp $transition-fast;
+    }
+
+    &.is-top {
+        animation: #{$prefix}-slideDown $transition-fast;
+    }
+
+    // Header
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px $spacing-md;
+        font-size: 13px;
+        font-weight: 500;
+        color: $color-text;
+        background: $bg-item;
+        border-bottom: 1px solid $border-light;
+        font-family: $font-stack;
+        gap: $spacing-sm;
+    }
+
+    // Header action button
+    &__header-action {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: none;
+        border-radius: $radius-full;
+        background: transparent;
+        color: $color-text-muted;
+        cursor: pointer;
+        transition:
+            background $transition-fast,
+            color $transition-fast;
+
+        svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        &:hover {
+            background: $bg-hover-strong;
+            color: $color-text;
+        }
+    }
+
+    // Favorites display in header
+    &__favorites {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+        flex-wrap: wrap;
+    }
+
+    &__favorites-icon {
+        display: flex;
+        align-items: center;
+        color: $color-favorite;
+
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+    }
+
+    &__favorites-badge {
+        font-size: 11px;
+        font-weight: 600;
+        color: $color-text;
+        background: $color-favorite;
+        padding: 2px 6px;
+        border-radius: $radius-sm;
+        white-space: nowrap;
+    }
+
+    &__favorites-none {
+        font-size: 12px;
+        color: $color-text-muted;
+        font-style: italic;
+    }
+
+    // Scrollable list
+    &__list {
+        max-height: 240px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    // Track item
+    &__item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: $spacing-sm $spacing-md;
+        border-bottom: 1px solid $border-lighter;
+        transition: background $transition-fast;
+        gap: $spacing-md;
+        cursor: pointer;
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        &:hover {
+            background: $bg-hover;
+        }
+
+        // Favorite state
+        &.is-favorite {
+            border-left: 3px solid $color-favorite;
+            padding-left: 9px;
+
+            .ytb2-popup__item-name {
+                color: $color-primary;
+            }
+        }
+    }
+
+    // Track name
+    &__item-name {
+        font-size: 14px;
+        color: $color-text;
+        font-family: $font-stack;
+        white-space: nowrap;
+    }
+
+    // Actions container
+    &__item-actions {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        flex-shrink: 0;
+    }
+
+    // Language code badge
+    &__item-code {
+        font-size: 12px;
+        color: $color-text-muted;
+        font-family: $font-stack;
+        background: $bg-hover-strong;
+        padding: 2px 6px;
+        border-radius: $radius-sm;
+        white-space: nowrap;
+    }
+
+    // Favorite button
+    &__item-action {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: none;
+        border-radius: $radius-full;
+        background: $bg-hover-strong;
+        color: $color-text;
+        cursor: pointer;
+        transition:
+            background $transition-fast,
+            color $transition-fast;
+        flex-shrink: 0;
+
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        &.is-favorite {
+            color: $color-favorite;
+            background: transparent;
+
+            &:hover {
+                color: $color-favorite-hover;
+                background: $bg-hover-strong;
+            }
+        }
+    }
+
+    &.removing {
+        animation: #{$prefix}-removing $transition-fast;
+    }
+}

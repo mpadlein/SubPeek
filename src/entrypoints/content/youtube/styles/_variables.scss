@@ -1,0 +1,46 @@
+$prefix: "ytbext";
+
+// Design Tokens
+$font-stack: "Roboto", Arial, sans-serif;
+
+// Colors
+$color-primary: #3ea6ff;
+$color-favorite: #ff4757;
+$color-favorite-hover: #ff6b7a;
+$color-text: #fff;
+$color-text-muted: #aaa;
+$color-text-dark: #888;
+
+// Backgrounds
+$bg-dark: #212121;
+$bg-item: rgba(255, 255, 255, 0.05);
+$bg-hover: rgba(255, 255, 255, 0.08);
+$bg-hover-strong: rgba(255, 255, 255, 0.1);
+
+// Borders
+$border-light: rgba(255, 255, 255, 0.1);
+$border-lighter: rgba(255, 255, 255, 0.05);
+$border-badge: rgba(255, 255, 255, 0.2);
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+
+// Border Radius
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-full: 50%;
+
+// Transitions
+$transition-fast: 0.15s ease;
+$transition-normal: 0.2s ease;
+
+// Shadows
+$shadow-popup: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+// Z-index
+$z-popup: 9999;
+$z-tooltip: 9999;
