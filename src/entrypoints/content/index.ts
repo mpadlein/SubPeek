@@ -3,6 +3,7 @@ import { loadSettings } from "@/common/storage";
 import { startObserver } from "./youtube";
 import "./youtube/styles/_badge.scss";
 import "./youtube/styles/_debugging.scss";
+import "./youtube/styles/_embed-thumbnail.scss";
 import "./youtube/styles/_popup.scss";
 import "./youtube/styles/_tooltip.scss";
 import "./youtube/styles/index.scss";

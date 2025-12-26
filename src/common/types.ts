@@ -2,12 +2,14 @@ export interface Settings {
     langCodes: string[];
     cacheTTL: number;
     renderEmpty: boolean;
+    renderAudio: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
     langCodes: ["en", "vi"],
     cacheTTL: 3600,
     renderEmpty: true,
+    renderAudio: false,
 };
 
 export interface CaptionTrack {

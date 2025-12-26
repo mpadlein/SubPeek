@@ -26,6 +26,7 @@ const elements = {
     favoritesEmpty: document.querySelector<HTMLDivElement>("#favorites-empty")!,
     cacheTTL: document.querySelector<HTMLSelectElement>("#cache-ttl")!,
     renderEmpty: document.querySelector<HTMLInputElement>("#render-empty")!,
+    renderAudio: document.querySelector<HTMLInputElement>("#render-audio")!,
     clearCache: document.querySelector<HTMLButtonElement>("#btn-clear-cache")!,
     cacheSize: document.querySelector<HTMLSpanElement>("#cache-size")!,
 };
@@ -237,6 +238,7 @@ function setupEventListeners() {
         selectedLanguages: langContainer,
         cacheTTL,
         renderEmpty,
+        renderAudio,
         clearCache,
     } = elements;
 
@@ -287,6 +289,11 @@ function setupEventListeners() {
         saveSettings({ renderEmpty: renderEmpty.checked });
     });
 
+    // Render audio toggle
+    renderAudio.addEventListener("change", () => {
+        saveSettings({ renderAudio: renderAudio.checked });
+    });
+
     // Clear cache
     clearCache.addEventListener("click", () => {
         browser.runtime.sendMessage({ event: EXTENSION_EVENTS.clearCache });
@@ -312,6 +319,7 @@ async function init() {
 
     elements.cacheTTL.value = settings.cacheTTL.toString();
     elements.renderEmpty.checked = settings.renderEmpty;
+    elements.renderAudio.checked = settings.renderAudio;
 
     setupEventListeners();
 

@@ -86,9 +86,14 @@ export class EmbedComponent {
         });
     }
 
-    render(): void {
-        this.renderSection(this.ccElement, this.captions);
-        this.renderSection(this.audioElement, this.audioTracks);
+    async render(): Promise<void> {
+        const settings = await loadSettings();
+        await this.renderSection(this.ccElement, this.captions);
+        if (settings.renderAudio) {
+            await this.renderSection(this.audioElement, this.audioTracks);
+        } else {
+            this.audioElement.remove();
+        }
     }
 
     private async renderSection(

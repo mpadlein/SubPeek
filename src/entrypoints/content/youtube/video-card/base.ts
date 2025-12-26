@@ -30,9 +30,9 @@ export abstract class VideoCard {
         this.anchor = this.getAnchor();
 
         this.root.addEventListener(EVENT.ELEMENT_VISIBLE, () => {
-            this.renderData();
+            this.render();
             this.anchor.addEventListener(EVENT.ANCHOR_HREF_CHANGE, () => {
-                this.renderData();
+                this.render();
             });
         });
 
@@ -42,9 +42,8 @@ export abstract class VideoCard {
         });
         metricsProxy.anchorOsv++;
 
-        this.root.querySelector(".ytbext-container")?.remove();
         this.embedComponent = new EmbedComponent();
-        this.insertBadgeContainer();
+        this.embed();
     }
 
     private getAnchor(): HTMLAnchorElement {
@@ -61,7 +60,7 @@ export abstract class VideoCard {
         return anchor as HTMLAnchorElement;
     }
 
-    getVideoUrl(): string {
+    private getVideoUrl(): string {
         const thumbnail: HTMLAnchorElement | null =
             this.root.querySelector("a#thumbnail") ||
             this.root.querySelector("a[href^='/watch?v=']");
@@ -73,10 +72,12 @@ export abstract class VideoCard {
         return thumbnail.href;
     }
 
-    /**
-     * Render caption/audio data in the badge container
-     */
-    async renderData(): Promise<void> {
+    private async render(): Promise<void> {
+        if (!this.embedComponent) {
+            this.embedComponent = new EmbedComponent();
+            this.embed();
+        }
+
         this.embedComponent.setLoading();
 
         const videoUrl = this.getVideoUrl();
@@ -90,9 +91,25 @@ export abstract class VideoCard {
         this.embedComponent.render();
     }
 
-    /**
-     * Insert the badge container into the video card
-     * Each card type implements this differently based on its DOM structure
-     */
-    abstract insertBadgeContainer(): void;
+    abstract embed(): void;
+
+    protected embedThumbnail(): void {
+        const img = this.root.querySelector(
+            "a[href^='/watch'] img",
+        ) as HTMLImageElement;
+        const imgParent = img.parentElement as HTMLElement;
+
+        const container = document.createElement("div");
+        container.classList.add("ytbext-thumbnail-wrapper");
+        imgParent.appendChild(container);
+
+        container.appendChild(img);
+        container.appendChild(this.embedComponent.root);
+
+        this.embedComponent.root.classList.add(
+            "ytbext-embed-container--thumbnail",
+        );
+
+        this.embedComponent.root.classList.add("ytbext-corner--bottom-left");
+    }
 }

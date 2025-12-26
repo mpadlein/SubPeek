@@ -9,15 +9,16 @@ import { VideoCard } from "./base";
 export class WatchSidebarCard extends VideoCard {
     static readonly TAG_NAME = "YT-LOCKUP-VIEW-MODEL";
 
-    insertBadgeContainer(): void {
-        const textContainer = this.root.querySelector(
-            ".yt-lockup-metadata-view-model__text-container",
-        );
+    embed(): void {
+        this.embedThumbnail();
+        // const textContainer = this.root.querySelector(
+        //     ".yt-lockup-metadata-view-model__text-container",
+        // );
 
-        if (textContainer) {
-            textContainer.appendChild(this.embedComponent.root);
-        } else {
-            console.error("WatchSidebarCard: Could not find text container");
-        }
+        // if (textContainer) {
+        //     textContainer.appendChild(this.embedComponent.root);
+        // } else {
+        //     console.error("WatchSidebarCard: Could not find text container");
+        // }
     }
 }
