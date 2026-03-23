@@ -39,7 +39,13 @@ export default defineBackground(() => {
         accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
     });
 
-    browser.tabs.reload = async () => {};
+    // Clean expired cache entries on startup
+    videoCache.cleanExpired();
+
+    // monkey patch to prevent wxt auto reload,
+    if (import.meta.env.MODE == "development") {
+        browser.tabs.reload = async () => {};
+    }
 
     browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const { event, data } = message;

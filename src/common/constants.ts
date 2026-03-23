@@ -4,4 +4,5 @@ export const EXTENSION_EVENTS = {
     setCacheVideoInfo: "setCacheVideoInfo",
     getCacheSize: "getCacheSize",
     clearCache: "clearCache",
+    shouldRerender: "shouldRerender",
 };

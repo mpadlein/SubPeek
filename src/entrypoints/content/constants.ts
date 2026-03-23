@@ -22,10 +22,15 @@ export const CSS_PREFIX = "ytbext";
 export const CSS = {
     // Badge container
     CONTAINER: `${CSS_PREFIX}-embed-container`,
+    CONTAINER_THUMBNAIL: `${CSS_PREFIX}-embed-container--thumbnail`,
+    CORNER_BOTTOM_LEFT: `${CSS_PREFIX}-corner--bottom-left`,
+    THUMBNAIL_WRAPPER: `${CSS_PREFIX}-thumbnail-wrapper`,
     ITEM: `${CSS_PREFIX}-item`,
     BADGE: `${CSS_PREFIX}-badge`,
     BADGES: `${CSS_PREFIX}-badges`,
     ICON: `${CSS_PREFIX}-icon`,
+    ICON_ACTIVE: `${CSS_PREFIX}-icon--active`,
+    ICON_IDLE: `${CSS_PREFIX}-icon--idle`,
 
     // Popup
     POPUP: `${CSS_PREFIX}-popup`,
@@ -55,7 +60,6 @@ export const CSS = {
 
 const EVENT_PREFIX = "ytbext";
 export const EVENT = {
-    RENDER: `${EVENT_PREFIX}:render`,
     ELEMENT_VISIBLE: `${EVENT_PREFIX}:element-visible`,
-    ANCHOR_HREF_CHANGE: `${EVENT_PREFIX}:anchor-href-change`,
+    RENDER: `${EVENT_PREFIX}:render`,
 } as const;

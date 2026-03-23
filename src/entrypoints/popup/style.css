@@ -396,29 +396,13 @@ body {
     font-weight: 500;
     color: var(--text-primary);
     animation: tagAppear 0.15s ease;
-    cursor: grab;
     user-select: none;
-    transition: background var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
+    transition: all var(--transition-fast);
 }
 
 .language-tag:hover {
     background: var(--bg-input-hover);
     border-color: var(--color-primary);
-}
-
-.language-tag:active {
-    cursor: grabbing;
-}
-
-.language-tag.dragging {
-    opacity: 0.4;
-    background: var(--bg-input);
-}
-
-.language-tag.drag-over {
-    border-color: var(--color-primary);
-    background: var(--color-primary-glow);
-    box-shadow: 0 0 0 2px var(--color-primary-glow);
 }
 
 @keyframes tagAppear {
@@ -432,30 +416,54 @@ body {
     }
 }
 
-/* Drag handle */
-.tag-drag-handle {
+/* Info icon */
+.info-icon {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
     color: var(--text-muted);
-    cursor: grab;
-    flex-shrink: 0;
+    cursor: help;
+    margin-left: auto;
     transition: color var(--transition-fast);
 }
 
-.tag-drag-handle:active {
-    cursor: grabbing;
+.info-icon:hover {
+    color: var(--text-secondary);
 }
 
-.tag-drag-handle svg {
-    width: 14px;
-    height: 14px;
+/* Context menu */
+.ctx-menu {
+    position: absolute;
+    z-index: 200;
+    background: #1a1a1a;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-dropdown);
+    padding: var(--spacing-xs) 0;
+    min-width: 140px;
 }
 
-.language-tag:hover .tag-drag-handle {
-    color: var(--color-primary);
+.ctx-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.ctx-menu-item:hover:not(:disabled) {
+    background: var(--bg-card-hover);
+}
+
+.ctx-menu-item:disabled {
+    color: var(--text-muted);
+    cursor: default;
 }
 
 /* Tag content wrapper */

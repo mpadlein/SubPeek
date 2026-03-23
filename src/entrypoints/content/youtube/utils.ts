@@ -2,8 +2,9 @@
  * Utility functions for URL parsing and DOM helpers
  */
 
-import { loadSettings } from "@/common/storage";
-import { TrackItem } from "./types";
+// import { loadSettings } from "@/common/storage";
+import { Settings } from "@/common/settings";
+import { TrackItem } from "@/common/types";
 
 /**
  * Extract video ID from a YouTube URL
@@ -60,8 +61,8 @@ export function createElement<K extends keyof HTMLElementTagNameMap>(
     return el;
 }
 
-export async function sortTrackByFavorite(tracks: TrackItem[]) {
-    const favoriteLangCodes = (await loadSettings()).langCodes;
+export function sortTrackByFavorite(tracks: TrackItem[]) {
+    const favoriteLangCodes = Settings.langCodes.get();
 
     tracks.sort((a, b) => {
         let indexA = favoriteLangCodes.indexOf(a.languageCode);

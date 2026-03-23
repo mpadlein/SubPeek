@@ -1,201 +1,186 @@
-import { EXTENSION_EVENTS } from "@/common/constants";
-import { loadSettings, saveSettings } from "@/common/storage";
+import { html, render, type TemplateResult } from "lit-html";
+import { classMap } from "lit-html/directives/class-map.js";
+
+import { Settings } from "@/common/settings";
+import type { TrackItem } from "@/common/types";
 import {
     CSS,
     ICON_AUDIO,
     ICON_CC,
     ICON_HEART,
     ICON_SETTINGS,
-} from "../constants";
-import type { AudioTrack, CaptionTrack } from "../types";
-import { createElement, createSvgIcon, sortTrackByFavorite } from "../utils";
+} from "../../constants";
+import { sortTrackByFavorite } from "../utils";
+import { svgIconTemplate } from "./utils";
 
-type TrackItem = CaptionTrack | AudioTrack;
+// ─── Templates ──────────────────────────────────────────────────────
 
-export class TrackPopup {
-    private root: HTMLElement;
-    private parent: HTMLElement;
+function headerTemplate(iconPath: string): TemplateResult {
+    return html`
+        <div class="${CSS.POPUP_HEADER}">
+            <div class="${CSS.ICON}">${svgIconTemplate(iconPath)}</div>
+            <button
+                class="${CSS.POPUP_HEADER_ACTION}"
+                title="Open extension options"
+                @click=${(e: Event) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    browser.runtime.openOptionsPage();
+                }}
+            >
+                ${svgIconTemplate(ICON_SETTINGS, 16)}
+            </button>
+        </div>
+    `;
+}
 
-    constructor(parent: HTMLElement) {
-        this.parent = parent;
-        this.root = createElement("div", CSS.POPUP);
+function trackItemTemplate(
+    track: TrackItem,
+    isFavorite: boolean,
+    onToggle: (code: string) => void,
+): TemplateResult {
+    const itemClasses = {
+        [CSS.POPUP_ITEM]: true,
+        [CSS.MOD_FAVORITE]: isFavorite,
+    };
 
-        this.root.onclick = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-        };
-    }
+    const actionClasses = {
+        [CSS.POPUP_ITEM_ACTION]: true,
+        [CSS.MOD_FAVORITE]: isFavorite,
+    };
 
-    async show(type: "cc" | "audio", tracks: TrackItem[]): Promise<void> {
-        const existing = document.querySelector(`.${CSS.POPUP}`);
-        if (existing) {
-            existing.remove();
-            return;
-        }
+    return html`
+        <div
+            class=${classMap(itemClasses)}
+            data-language-code="${track.languageCode}"
+            @click=${(e: Event) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggle(track.languageCode);
+            }}
+        >
+            <span class="${CSS.POPUP_ITEM_NAME}">${track.name}</span>
+            <div class="${CSS.POPUP_ITEM}-actions">
+                <span class="${CSS.POPUP_ITEM_CODE}">
+                    ${track.languageCode}
+                </span>
+                <button
+                    class=${classMap(actionClasses)}
+                    title=${isFavorite
+                        ? "Remove from favorites"
+                        : "Add to favorites"}
+                >
+                    ${svgIconTemplate(ICON_HEART, 14)}
+                </button>
+            </div>
+        </div>
+    `;
+}
 
-        if (tracks.length === 0) return;
-
-        this.renderHeader(type);
-        await this.renderList(tracks);
-
-        this.root.style.visibility = "hidden";
-        document.body.appendChild(this.root);
-        this.positionPopup();
-        this.root.style.visibility = "visible";
-    }
-
-    private renderHeader(type: "cc" | "audio"): void {
-        const header = createElement("div", CSS.POPUP_HEADER);
-        const iconPath = type === "cc" ? ICON_CC : ICON_AUDIO;
-
-        const iconContainer = createElement("div", CSS.ICON);
-        iconContainer.appendChild(createSvgIcon(iconPath));
-
-        // Options button
-        const optionsBtn = createElement("button", CSS.POPUP_HEADER_ACTION);
-        optionsBtn.appendChild(createSvgIcon(ICON_SETTINGS, 16));
-        optionsBtn.title = "Open extension options";
-        optionsBtn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            browser.runtime.openOptionsPage();
-        };
-
-        header.appendChild(iconContainer);
-        header.appendChild(optionsBtn);
-        this.root.appendChild(header);
-    }
-
-    private async renderList(tracks: TrackItem[]): Promise<void> {
-        const list = createElement("div", CSS.POPUP_LIST);
-
-        await sortTrackByFavorite(tracks);
-        const favoriteLangCodes = (await loadSettings()).langCodes;
-
-        tracks.forEach((track) => {
-            list.appendChild(
-                this.createTrackItem(
+function listTemplate(
+    tracks: TrackItem[],
+    favoriteLangCodes: string[],
+    onToggle: (code: string) => void,
+): TemplateResult {
+    return html`
+        <div class="${CSS.POPUP_LIST}">
+            ${tracks.map((track) =>
+                trackItemTemplate(
                     track,
                     favoriteLangCodes.includes(track.languageCode),
+                    onToggle,
                 ),
-            );
-        });
+            )}
+        </div>
+    `;
+}
 
-        this.root.appendChild(list);
-    }
+function popupTemplate(
+    type: "cc" | "audio",
+    tracks: TrackItem[],
+    onToggle: (code: string) => void,
+): TemplateResult {
+    const iconPath = type === "cc" ? ICON_CC : ICON_AUDIO;
+    return html`
+        ${headerTemplate(iconPath)}
+        ${listTemplate(tracks, Settings.langCodes.get(), onToggle)}
+    `;
+}
 
-    private createTrackItem(
-        track: TrackItem,
-        isFavorite: boolean,
-    ): HTMLElement {
-        const item = createElement("div", CSS.POPUP_ITEM);
-        item.dataset.languageCode = track.languageCode;
-        if (isFavorite) item.classList.add(CSS.MOD_FAVORITE);
+// ─── Positioning ────────────────────────────────────────────────────
 
-        // Name
-        const name = createElement("span", CSS.POPUP_ITEM_NAME);
-        name.textContent = track.name;
+function positionPopup(root: HTMLElement, parent: HTMLElement): void {
+    const rect = parent.getBoundingClientRect();
+    const isBottomHalf = rect.top > window.innerHeight / 2;
 
-        // Actions container
-        const actions = createElement("div", `${CSS.POPUP_ITEM}-actions`);
+    root.classList.add(isBottomHalf ? CSS.MOD_BOTTOM : CSS.MOD_TOP);
 
-        // Language code badge
-        const code = createElement("span", CSS.POPUP_ITEM_CODE);
-        code.textContent = track.languageCode;
+    let left = rect.left;
+    const rightOverflow = left + root.clientWidth - window.innerWidth + 24;
+    if (rightOverflow > 0) left -= rightOverflow;
+    root.style.left = `${left}px`;
 
-        // Favorite button
-        const favBtn = createElement("button", CSS.POPUP_ITEM_ACTION);
-        if (isFavorite) favBtn.classList.add(CSS.MOD_FAVORITE);
-        favBtn.appendChild(createSvgIcon(ICON_HEART, 14));
-        favBtn.title = isFavorite
-            ? "Remove from favorites"
-            : "Add to favorites";
-
-        // Click handler for entire item
-        item.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.toggleFavorite(item, favBtn, track.languageCode);
-        };
-
-        actions.appendChild(code);
-        actions.appendChild(favBtn);
-        item.appendChild(name);
-        item.appendChild(actions);
-
-        return item;
-    }
-
-    private async toggleFavorite(
-        item: HTMLElement,
-        button: HTMLElement,
-        languageCode: string,
-    ): Promise<void> {
-        const isFavorite = item.classList.contains(CSS.MOD_FAVORITE);
-        let favoriteLangCodes = (await loadSettings()).langCodes;
-        if (isFavorite) {
-            favoriteLangCodes = favoriteLangCodes.filter(
-                (code) => code !== languageCode,
-            );
-            item.classList.remove(CSS.MOD_FAVORITE);
-            button.classList.remove(CSS.MOD_FAVORITE);
-            button.title = "Add to favorites";
-        } else {
-            item.classList.add(CSS.MOD_FAVORITE);
-            button.classList.add(CSS.MOD_FAVORITE);
-            button.title = "Remove from favorites";
-            if (!favoriteLangCodes.includes(languageCode)) {
-                favoriteLangCodes.push(languageCode);
-            }
-        }
-        await saveSettings({ langCodes: favoriteLangCodes });
-        window.dispatchEvent(
-            new CustomEvent(EXTENSION_EVENTS.langCodesUpdated),
-        );
-    }
-
-    private positionPopup(): void {
-        const rect = this.parent.getBoundingClientRect();
-        const isBottomHalf = rect.top > window.innerHeight / 2;
-
-        this.root.classList.add(isBottomHalf ? CSS.MOD_BOTTOM : CSS.MOD_TOP);
-
-        // Calculate horizontal position
-        let left = rect.left;
-        const width = this.root.clientWidth;
-        const rightOverflow = left + width - window.innerWidth + 24;
-        if (rightOverflow > 0) {
-            left -= rightOverflow;
-        }
-        this.root.style.left = `${left}px`;
-
-        // Calculate vertical position
-        if (isBottomHalf) {
-            // Show above parent
-            this.root.style.bottom = `${window.innerHeight - rect.top + 4}px`;
-        } else {
-            // Show below parent
-            this.root.style.top = `${rect.bottom + 4}px`;
-        }
+    if (isBottomHalf) {
+        root.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+    } else {
+        root.style.top = `${rect.bottom + 4}px`;
     }
 }
 
-// Global click handler to close popups
-document.addEventListener("click", (event: MouseEvent) => {
+// ─── Public API ─────────────────────────────────────────────────────
+
+export function showTrackPopup(
+    parent: HTMLElement,
+    type: "cc" | "audio",
+    tracks: TrackItem[],
+): void {
+    const existing = document.querySelector(`.${CSS.POPUP}`);
+    if (existing) {
+        existing.remove();
+        return;
+    }
+
+    if (tracks.length === 0) return;
+
+    sortTrackByFavorite(tracks);
+
+    const root = document.createElement("div");
+    root.className = CSS.POPUP;
+    root.onclick = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+    };
+
+    const renderContent = () => {
+        render(popupTemplate(type, tracks, toggleFavorite), root);
+    };
+
+    const toggleFavorite = (languageCode: string) => {
+        if (Settings.langCodes.get().includes(languageCode)) {
+            Settings.langCodes.remove(languageCode);
+        } else {
+            Settings.langCodes.add(languageCode);
+        }
+
+        renderContent();
+    };
+
+    renderContent();
+
+    root.style.visibility = "hidden";
+    document.body.appendChild(root);
+    positionPopup(root, parent);
+    root.style.visibility = "visible";
+}
+
+// ─── Global listeners to close popups ───────────────────────────────
+
+function closePopupOutside(event: Event): void {
     const popup = document.querySelector(`.${CSS.POPUP}`);
     if (popup && !popup.contains(event.target as Node)) {
         popup.remove();
     }
-});
+}
 
-// Close popup on scroll (but not when scrolling inside the popup)
-window.addEventListener(
-    "scroll",
-    (event: Event) => {
-        const popup = document.querySelector(`.${CSS.POPUP}`);
-        if (popup && !popup.contains(event.target as Node)) {
-            popup.remove();
-        }
-    },
-    true,
-);
+document.addEventListener("click", closePopupOutside);
+window.addEventListener("scroll", closePopupOutside, true);

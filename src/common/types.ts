@@ -5,13 +5,6 @@ export interface Settings {
     renderAudio: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = {
-    langCodes: ["en", "vi"],
-    cacheTTL: 3600,
-    renderEmpty: true,
-    renderAudio: false,
-};
-
 export interface CaptionTrack {
     languageCode: string;
     name: string;
@@ -38,3 +31,5 @@ export interface CacheEntry {
     data: VideoInfo;
     timestamp: number;
 }
+
+export type TrackItem = CaptionTrack | AudioTrack;

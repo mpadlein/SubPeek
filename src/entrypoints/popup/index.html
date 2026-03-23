@@ -9,114 +9,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
-  <div id="app">
-    <!-- Header -->
-    <header class="header">
-      <div class="logo-placeholder">
-        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="4" width="20" height="16" rx="3" stroke="currentColor" stroke-width="2" />
-          <path d="M6 15h4M11 15h7M6 11h8M15 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-        </svg>
-      </div>
-      <div class="header-text">
-        <h1>YT Subtitles</h1>
-        <span class="version">Settings</span>
-      </div>
-    </header>
-
-    <!-- Language Selector Section -->
-    <section class="settings-card">
-      <div class="card-header">
-        <h2>Caption Languages</h2>
-        <span class="card-description">Select languages to track</span>
-      </div>
-
-      <div class="language-selector">
-        <div class="search-container">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
-            <path d="M16 16l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
-          <input type="text" id="language-search" placeholder="Search languages..." autocomplete="off" />
-        </div>
-        <ul id="language-dropdown" class="language-dropdown hidden"></ul>
-      </div>
-
-      <div class="favorites-section">
-        <div class="favorites-header">
-          <span class="favorites-label">Favorited Languages</span>
-          <span id="favorites-count" class="favorites-count"></span>
-        </div>
-        <div id="selected-languages" class="selected-languages"></div>
-        <div id="favorites-empty" class="favorites-empty hidden">
-          <span>No favorited languages yet. Search and add languages above.</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- Options Section -->
-    <section class="settings-card">
-      <div class="card-header">
-        <h2>Options</h2>
-      </div>
-
-      <!-- Cache TTL -->
-      <div class="option-row">
-        <div class="option-info">
-          <label for="cache-ttl">Video Cache TTL</label>
-          <span class="option-description">How long to cache video data</span>
-        </div>
-        <select id="cache-ttl" class="select-input">
-          <option value="1800">30 minutes</option>
-          <option value="3600" selected>1 hour</option>
-          <option value="10800">3 hours</option>
-          <option value="21600">6 hours</option>
-          <option value="43200">12 hours</option>
-          <option value="86400">24 hours</option>
-        </select>
-      </div>
-
-      <!-- Render Empty Badges -->
-      <div class="option-row">
-        <div class="option-info">
-          <label for="render-empty">Render Empty Badges</label>
-          <span class="option-description">Show badges when no captions found</span>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="render-empty" checked />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-      <!-- Render Audio -->
-      <div class="option-row">
-        <div class="option-info">
-          <label for="render-audio">Render Audio Badges</label>
-          <span class="option-description">Show badges when no audio found</span>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="render-audio" checked />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-    </section>
-
-    <!-- Actions Section -->
-    <section class="settings-card actions-card">
-      <button id="btn-clear-cache" class="btn btn-secondary">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Clear Cache
-        <span id="cache-size"></span>
-      </button>
-    </section>
-  </div>
-  <script type="module" src="./main.ts"></script>
+  <div id="app"></div>
+  <script type="module" src="./scripts/main.ts"></script>
 </body>
 
 </html>

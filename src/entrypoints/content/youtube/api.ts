@@ -1,11 +1,10 @@
-import { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
-import { VIDEO_CACHE_TIMEOUT } from "@/utils/config";
-import { logger } from "@/utils/logger";
-import { extractVideoId } from "./utils";
-// import { videoCache } from "./cache";
 import { EXTENSION_EVENTS } from "@/common/constants";
+import { Settings } from "@/common/settings";
+import { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
+import { logger } from "@/utils/logger";
 import pLimit from "p-limit";
-import { metricsProxy } from "./debugging";
+import { metricsProxy } from "../debugging";
+import { extractVideoId } from "./utils";
 
 function parseVideoResponse(html: string): VideoInfo {
     const regex = /var ytInitialPlayerResponse\s*=\s*(\{.+?\});/s;
@@ -52,111 +51,65 @@ function parseVideoResponse(html: string): VideoInfo {
     return { captions, audioTracks };
 }
 
-function getCache(videoId: string): Promise<VideoInfo | null> {
-    const now = Date.now() / 1000;
-    return new Promise((resolve, reject) => {
-        browser.runtime.sendMessage(
-            {
-                event: EXTENSION_EVENTS.getCacheVideoInfo,
-                data: {
-                    videoId,
-                },
-            },
-            (response) => {
-                if (response.videoId === videoId) {
-                    if (response.cacheData) {
-                        const { data, timestamp } = response.cacheData;
-                        const age = now - timestamp;
-                        if (age < VIDEO_CACHE_TIMEOUT) {
-                            metricsProxy.cacheHit++;
-                            resolve(data);
-                            return;
-                        }
-                        metricsProxy.cacheExpired++;
-                    }
-                }
-                resolve(null);
-            },
-        );
-    });
+async function getCache(videoId: string): Promise<VideoInfo | null> {
+    try {
+        const now = Date.now() / 1000;
+        const response = await browser.runtime.sendMessage({
+            event: EXTENSION_EVENTS.getCacheVideoInfo,
+            data: { videoId },
+        });
+
+        if (response?.videoId === videoId && response.cacheData) {
+            const { data, timestamp } = response.cacheData;
+            const age = now - timestamp;
+            if (age < Settings.cacheTTL.get()) {
+                metricsProxy.cacheHit++;
+                return data;
+            }
+            metricsProxy.cacheExpired++;
+        }
+        return null;
+    } catch (error) {
+        logger.error("Cache read error:", error);
+        return null;
+    }
 }
 
-function saveCache(videoId: string, data: VideoInfo): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-        browser.runtime.sendMessage(
-            {
-                event: EXTENSION_EVENTS.setCacheVideoInfo,
-                data: {
-                    videoId,
-                    data,
-                },
-            },
-            (response) => {
-                if (response) {
-                    resolve(response.data);
-                }
-            },
-        );
+async function saveCache(videoId: string, data: VideoInfo): Promise<void> {
+    await browser.runtime.sendMessage({
+        event: EXTENSION_EVENTS.setCacheVideoInfo,
+        data: { videoId, data },
     });
 }
 
 const fetchLimit = pLimit(4);
 async function fetchData(url: string) {
-    const now = Date.now();
     const html = await fetchLimit(async () => {
         const response = await fetch(url);
         const html = await response.text();
 
-        // await sleep(1000);
         return html;
     });
     metricsProxy.fetch++;
     const data = parseVideoResponse(html);
-    const t3 = Date.now() - now;
-    console.log("fetchData time", t3);
     return data;
 }
 
 export async function resolveVideoInfo(url: string): Promise<VideoInfo> {
-    // await sleep(500);
-    return new Promise(async (resolve, reject) => {
-        const videoId = extractVideoId(url);
-        if (!videoId) {
-            logger.warn("Could not extract video ID from URL: " + url);
-            resolve({ captions: [], audioTracks: [] });
-            return;
-        }
+    const videoId = extractVideoId(url);
+    if (!videoId) {
+        logger.warn("Could not extract video ID from URL: " + url);
+        return { captions: [], audioTracks: [] };
+    }
 
-        let cacheData = await getCache(videoId);
-        if (cacheData) {
-            resolve(cacheData);
-            return;
-        }
+    const cacheData = await getCache(videoId);
+    if (cacheData) return cacheData;
 
-        // Fetch fresh data
-        const data = await fetchData(url);
+    // Fetch fresh data
+    const data = await fetchData(url);
 
-        data.captions.forEach((item) => {
-            const { languageCode, name } = item;
-            const k = `languageCode:cc:${languageCode}:${name}`;
-            browser.storage.local.set({ [k]: { languageCode, name } });
-        });
-        data.audioTracks.forEach((item) => {
-            const { languageCode, name } = item;
-            const k = `languageCode:audio:${languageCode}:${name}`;
-            browser.storage.local.set({ [k]: { languageCode, name } });
-        });
+    // Update cache (fire-and-forget)
+    saveCache(videoId, data).catch((e) => logger.error("Cache write error:", e));
 
-        resolve(data);
-
-        // Update cache
-        try {
-            await saveCache(videoId, data);
-        } catch (error) {
-            logger.error("Cache write error:", error);
-        }
-    });
+    return data;
 }
-
-// // Clean expired cache on module load
-// videoCache.cleanExpired();

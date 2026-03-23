@@ -1,7 +1,5 @@
-// Content script for YouTube caption display
-import { loadSettings } from "@/common/storage";
-import { startObserver } from "./youtube";
-import "./youtube/styles/_badge.scss";
+import { browserStorageLocalSV } from "@/common/storage";
+import start from "./main";
 import "./youtube/styles/_debugging.scss";
 import "./youtube/styles/_embed-thumbnail.scss";
 import "./youtube/styles/_popup.scss";
@@ -10,13 +8,11 @@ import "./youtube/styles/index.scss";
 
 export default defineContentScript({
     matches: ["https://www.youtube.com/*", "https://youtube.com/*"],
-    runAt: "document_end",
+    runAt: "document_start",
     cssInjectionMode: "manifest",
 
-    main() {
-        startObserver();
-        loadSettings().then((settings) => {
-            console.log("settings", settings);
-        });
+    async main() {
+        await browserStorageLocalSV.ready();
+        start();
     },
 });

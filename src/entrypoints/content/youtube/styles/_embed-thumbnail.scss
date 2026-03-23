@@ -1,21 +1,36 @@
 @use "variables" as *;
 @use "animations";
 
-/**
- * Thumbnail Overlay Styles
- * 
- * These styles are for when the embed component is positioned 
- * as an overlay on the video thumbnail.
- * Uses CSS container queries to auto-scale based on thumbnail size.
- */
+$icon-opacity-idle: 0.5;
+$icon-opacity-active: 1;
 
-// Thumbnail wrapper - needed for container queries
+@keyframes #{$prefix}-icon-fade-in {
+    from {
+        opacity: $icon-opacity-idle;
+    }
+    to {
+        opacity: $icon-opacity-active;
+    }
+}
+.#{$prefix}-embed-container {
+    width: fit-content;
+    margin-top: $spacing-xs;
+    box-sizing: border-box;
+    animation: #{$prefix}-fadeIn 0.5s ease-out;
+    cursor: pointer;
+    transition: background $transition-normal;
+    user-select: none;
+    position: relative;
+}
+
 .#{$prefix}-thumbnail-wrapper {
     position: relative;
     container-type: inline-size;
     container-name: thumbnail;
     z-index: 1;
     isolation: isolate;
+    height: 100%;
+    width: 100%;
 }
 
 // Container when overlaid on thumbnail
@@ -23,7 +38,8 @@
     position: absolute;
     width: fit-content;
     height: auto;
-    margin: $spacing-sm;
+    // margin: $spacing-sm;
+    margin: 6px;
     pointer-events: none;
     z-index: 10;
     transform-origin: bottom left;
@@ -31,6 +47,65 @@
     // Allow interaction with badge items
     .#{$prefix}-item {
         pointer-events: auto;
+    }
+
+    @container (max-width: 150px) {
+        transform: scale(0.75);
+        margin: $spacing-xs;
+    }
+
+    @container (min-width: 150px) and (max-width: 200px) {
+        transform: scale(0.85);
+        margin: $spacing-xs;
+    }
+
+    @container (min-width: 200px) and (max-width: 300px) {
+        transform: scale(1);
+    }
+
+    @container (min-width: 300px) {
+        transform: scale(1.15);
+    }
+
+    .#{$prefix}-item {
+        display: flex;
+        gap: $spacing-xs;
+        padding: 3px 6px;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(4px);
+        margin: 0;
+
+        .#{$prefix}-icon {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            color: $color-text;
+            opacity: $icon-opacity-idle;
+
+            &--active {
+                animation: #{$prefix}-icon-fade-in 0.5s ease-out;
+                opacity: $icon-opacity-active;
+            }
+        }
+
+        &:first-child {
+            border-top-left-radius: $radius-sm;
+            border-top-right-radius: $radius-sm;
+        }
+
+        &:last-child {
+            border-bottom-left-radius: $radius-sm;
+            border-bottom-right-radius: $radius-sm;
+        }
+
+        &:not(:first-child) {
+            border-top: 1px solid $border-light;
+            margin-left: 0;
+        }
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.85);
+        }
     }
 }
 
@@ -59,109 +134,46 @@
     transform-origin: bottom right;
 }
 
-// ============================================
-// Container Query Scaling
-// ============================================
-
-// Extra small thumbnails (< 150px) - sidebar mini
-@container thumbnail (max-width: 150px) {
-    .#{$prefix}-embed-container--thumbnail {
-        transform: scale(0.75);
-        margin: $spacing-xs;
-    }
-}
-
-// Small thumbnails (150px - 200px) - sidebar recommendations
-@container thumbnail (min-width: 150px) and (max-width: 200px) {
-    .#{$prefix}-embed-container--thumbnail {
-        transform: scale(0.85);
-        margin: $spacing-xs;
-    }
-}
-
-// Medium thumbnails (200px - 300px) - search results, playlists
-@container thumbnail (min-width: 200px) and (max-width: 300px) {
-    .#{$prefix}-embed-container--thumbnail {
-        transform: scale(1);
-    }
-}
-
-// Large thumbnails (> 300px) - channel page, home feed
-@container thumbnail (min-width: 300px) {
-    .#{$prefix}-embed-container--thumbnail {
-        transform: scale(1.15);
-    }
-}
-
-// ============================================
-// Badge Row Styling
-// ============================================
-
-// Thumbnail badge row styling (horizontal rows, stacked vertically)
-.#{$prefix}-embed-container--thumbnail .#{$prefix}-item {
-    display: flex;
-    gap: $spacing-xs;
-    padding: 3px 6px;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(4px);
-    margin: 0;
-
-    &:first-child {
-        border-top-left-radius: $radius-sm;
-        border-top-right-radius: $radius-sm;
-    }
-
-    &:last-child {
-        border-bottom-left-radius: $radius-sm;
-        border-bottom-right-radius: $radius-sm;
-    }
-
-    &:not(:first-child) {
-        border-top: 1px solid $border-light;
-        margin-left: 0;
-    }
-
-    &:hover {
-        background: rgba(0, 0, 0, 0.85);
-    }
-}
-
-// Thumbnail icon styling
-.#{$prefix}-embed-container--thumbnail .#{$prefix}-icon {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    color: $color-text;
-}
-
 // Thumbnail badges
 .#{$prefix}-embed-container--thumbnail .#{$prefix}-badges {
-    padding-left: 2px;
-    gap: 3px;
-}
+    display: flex;
+    flex-wrap: wrap;
+    padding-left: $spacing-xs;
+    gap: $spacing-xs;
 
-// Thumbnail badge items
-.#{$prefix}-embed-container--thumbnail .#{$prefix}-badge {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 1px 4px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.15);
-    border: none;
+    .#{$prefix}-badge {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 1px 4px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 2px;
+        border: none;
 
-    &--muted {
-        background: rgba(136, 136, 136, 0.3);
+        display: inline-flex;
+        align-items: center;
+        font-family: $font-stack;
+        color: $color-primary;
+
+        &--muted {
+            color: $color-text-dark;
+            background: rgba(136, 136, 136, 0.3);
+        }
+
+        &--more {
+            background: transparent;
+            color: $color-text-muted;
+            border-color: transparent;
+            // background: $bg-item;
+        }
     }
 
-    &--more {
-        background: transparent;
-        color: $color-text-muted;
+    .#{$prefix}-loading__spinner {
+        margin: auto;
+        width: 10px;
+        height: 10px;
+        border: 2px solid $border-light;
+        border-top-color: $color-primary;
+        border-radius: $radius-full;
+        animation: #{$prefix}-spin 1.2s linear infinite;
     }
-}
-
-// Loading spinner
-.#{$prefix}-embed-container--thumbnail .#{$prefix}-loading__spinner {
-    width: 10px;
-    height: 10px;
-    border-width: 1.5px;
 }
