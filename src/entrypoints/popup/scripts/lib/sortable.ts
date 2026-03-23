@@ -100,34 +100,28 @@ export function initSortable(
             cleanupFns.push(
                 dropTargetForElements({
                     element: child,
-                    onDragEnter: () => child.classList.add("drag-over"),
-                    onDragLeave: () => child.classList.remove("drag-over"),
-                    onDrop: () => child.classList.remove("drag-over"),
+                    canDrop: ({ source }) => source.element !== child,
+                    onDragEnter: ({ source }) => {
+                        // Live reorder: items slide out of the way during drag
+                        const fromIndex = getIndex(source.element);
+                        const toIndex = getIndex(child);
+                        if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+                        const oldRects = snapshotRects();
+                        config.onReorder(fromIndex, toIndex);
+                        animateFlip(oldRects);
+                    },
                 }),
             );
         }
 
+        // Monitor for cleanup on drop
         cleanupFns.push(
             monitorForElements({
-                onDrop: ({ source, location }) => {
-                    const target = location.current.dropTargets[0];
-                    if (!target) return;
-
-                    const fromIndex = getIndex(source.element);
-                    const toIndex = getIndex(target.element);
-                    if (
-                        fromIndex === -1 ||
-                        toIndex === -1 ||
-                        fromIndex === toIndex
-                    )
-                        return;
-
-                    // FLIP: snapshot before DOM update
-                    const oldRects = snapshotRects();
-                    // onReorder must synchronously update the DOM
-                    config.onReorder(fromIndex, toIndex);
-                    // FLIP: animate from old to new positions
-                    animateFlip(oldRects);
+                onDrop: () => {
+                    for (const c of Array.from(container.children)) {
+                        (c as HTMLElement).classList.remove("dragging");
+                    }
                 },
             }),
         );
