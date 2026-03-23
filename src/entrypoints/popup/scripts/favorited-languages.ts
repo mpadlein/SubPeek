@@ -15,22 +15,59 @@ export function createFavoritedLanguages(rerender: () => void) {
         Settings.langCodes.remove(code);
     }
 
+    function snapshotRects(...codes: string[]) {
+        const rects = new Map<string, DOMRect>();
+        for (const c of codes) {
+            const el = document.querySelector(`.language-tag[data-code="${c}"]`);
+            if (el) rects.set(c, el.getBoundingClientRect());
+        }
+        return rects;
+    }
+
+    function animateSwap(oldRects: Map<string, DOMRect>) {
+        for (const [c, oldRect] of oldRects) {
+            const el = document.querySelector(
+                `.language-tag[data-code="${c}"]`,
+            ) as HTMLElement | null;
+            if (!el) continue;
+            const dy = oldRect.top - el.getBoundingClientRect().top;
+            if (dy === 0) continue;
+            el.style.transform = `translateY(${dy}px)`;
+            void el.offsetWidth;
+            el.style.transition = "transform 150ms ease";
+            el.style.transform = "";
+            el.addEventListener(
+                "transitionend",
+                () => {
+                    el.style.transition = "";
+                },
+                { once: true },
+            );
+        }
+    }
+
     function handleMoveUp(code: string) {
         const codes = [...Settings.langCodes.get()];
         const i = codes.indexOf(code);
         if (i <= 0) return;
+        const rects = snapshotRects(code, codes[i - 1]);
         [codes[i - 1], codes[i]] = [codes[i], codes[i - 1]];
         Settings.langCodes.set(codes);
-        closeMenu();
+        contextMenu = null;
+        rerender();
+        animateSwap(rects);
     }
 
     function handleMoveDown(code: string) {
         const codes = [...Settings.langCodes.get()];
         const i = codes.indexOf(code);
         if (i === -1 || i >= codes.length - 1) return;
+        const rects = snapshotRects(code, codes[i + 1]);
         [codes[i], codes[i + 1]] = [codes[i + 1], codes[i]];
         Settings.langCodes.set(codes);
-        closeMenu();
+        contextMenu = null;
+        rerender();
+        animateSwap(rects);
     }
 
     function handleContextMenu(e: MouseEvent, code: string) {
