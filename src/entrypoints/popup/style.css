@@ -398,7 +398,7 @@ body {
     animation: tagAppear 0.15s ease;
     cursor: grab;
     user-select: none;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
 }
 
 .language-tag:hover {
@@ -413,7 +413,6 @@ body {
 .language-tag.dragging {
     opacity: 0.4;
     background: var(--bg-input);
-    transform: scale(0.98);
 }
 
 .language-tag.drag-over {
