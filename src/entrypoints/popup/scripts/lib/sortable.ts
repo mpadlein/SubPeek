@@ -65,9 +65,13 @@ export function initSortable(
         for (const el of animated) {
             el.style.transition = `transform ${FLIP_DURATION_MS}ms ease`;
             el.style.transform = "";
+            const timeoutId = setTimeout(() => {
+                el.style.transition = "";
+            }, FLIP_DURATION_MS + 50);
             el.addEventListener(
                 "transitionend",
                 () => {
+                    clearTimeout(timeoutId);
                     el.style.transition = "";
                 },
                 { once: true },

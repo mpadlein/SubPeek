@@ -79,9 +79,13 @@ export function createFavoritedLanguages(rerender: () => void) {
                         getHandle: (el) =>
                             el.querySelector(".tag-drag-handle"),
                     });
-                } else if (langCodes.join() !== prevCodes.join()) {
-                    // Reconnect when items added/removed (not after reorder —
-                    // repeat() preserves DOM nodes on reorder, so bindings survive)
+                } else if (
+                    // Reconnect only when items added/removed, not after reorder.
+                    // Compare sorted arrays so reorder (same items, different order) is ignored.
+                    // repeat() preserves DOM nodes on reorder, so bindings survive.
+                    [...langCodes].sort().join() !==
+                    [...prevCodes].sort().join()
+                ) {
                     sortable.reconnect();
                 }
             });
