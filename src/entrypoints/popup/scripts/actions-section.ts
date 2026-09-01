@@ -19,7 +19,11 @@ export function createActionsSection(rerender: () => void) {
     }
 
     function handleClearCache() {
-        browser.runtime.sendMessage({ event: EXTENSION_EVENTS.clearCache });
+        browser.runtime
+            .sendMessage({ event: EXTENSION_EVENTS.clearCache })
+            .catch((error) => {
+                logger.error("Could not clear cache:", error);
+            });
         cleared = true;
         rerender();
         setTimeout(() => {

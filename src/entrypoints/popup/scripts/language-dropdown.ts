@@ -22,6 +22,9 @@ export function createLanguageDropdown(rerender: () => void) {
         Settings.langCodes.add(code);
         searchText = "";
         dropdownOpen = false;
+        // add() no-ops for an already-favorited code, so no storage event
+        // arrives to re-render; render the state change explicitly.
+        rerender();
     }
 
     function dropdownItemTemplate(lang: LanguageItem) {

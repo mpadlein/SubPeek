@@ -71,7 +71,7 @@ export function createOptionsSection(rerender: () => void) {
                     <div class="option-info">
                         <label for="render-audio">Render Audio Badges</label>
                         <span class="option-description"
-                            >Show badges when no audio found</span
+                            >Show audio track badges on thumbnails</span
                         >
                     </div>
                     <label class="toggle-switch">

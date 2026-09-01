@@ -1,7 +1,9 @@
 import { html, render } from "lit-html";
 
 const metrics: Record<string, number> = {
-    fetch: 0,
+    fetchInnerTube: 0,
+    fetchFallback: 0,
+    rateLimited: 0,
     cacheHit: 0,
     cacheExpired: 0,
     itsOsv: 0,

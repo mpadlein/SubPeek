@@ -1,9 +1,3 @@
-export type SubscribeStorageParams = {
-    key: string;
-    callback: () => any;
-    init?: boolean;
-};
-
 class BrowserStorageSync {
     private storage: Map<string, any> = new Map();
     private storageApi: Browser.storage.StorageArea;

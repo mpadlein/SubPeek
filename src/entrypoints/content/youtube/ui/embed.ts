@@ -143,7 +143,7 @@ export async function initEmbed(
         sortTrackByFavorite(captionTracks);
         sortTrackByFavorite(audioTracks);
     } catch (e) {
-        console.error(e);
+        logger.error("initEmbed failed:", e);
         captionTracks = [];
         audioTracks = [];
     } finally {
@@ -159,7 +159,7 @@ function handleUserLangCodesUpdate() {
 }
 
 Settings.langCodes.subscribe(() => {
-    console.log("User language codes updated, re-rendering embeds...");
+    logger.debug("User language codes updated, re-rendering embeds...");
     handleUserLangCodesUpdate();
 });
 Settings.renderAudio.subscribe(() => {

@@ -71,10 +71,16 @@ function sweepDetachedImgs() {
 }
 
 function observeImg(img: HTMLImageElement) {
-    img.addEventListener(EVENT.ELEMENT_VISIBLE, () => {
-        pendingImgs.delete(img);
-        mountOverlay(img);
-    });
+    // once: a swept-then-readded img goes through observeImg again, and a
+    // second permanent listener would double-mount on a single dispatch.
+    img.addEventListener(
+        EVENT.ELEMENT_VISIBLE,
+        () => {
+            pendingImgs.delete(img);
+            mountOverlay(img);
+        },
+        { once: true },
+    );
 
     intersectionObserver.observe(img);
     pendingImgs.add(img);

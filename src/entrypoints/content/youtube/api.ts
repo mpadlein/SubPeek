@@ -220,13 +220,33 @@ async function saveCache(videoId: string, data: VideoInfo): Promise<void> {
     });
 }
 
-export async function resolveVideoInfo(url: string): Promise<VideoInfo> {
+/**
+ * Collapses concurrent lookups for the same video (a video often appears in
+ * several thumbnails at once) into a single cache read + fetch.
+ */
+const inFlight = new Map<string, Promise<VideoInfo>>();
+
+export function resolveVideoInfo(url: string): Promise<VideoInfo> {
     const videoId = extractVideoId(url);
     if (!videoId) {
         logger.warn("Could not extract video ID from URL: " + url);
-        return emptyVideoInfo();
+        return Promise.resolve(emptyVideoInfo());
     }
 
+    const pending = inFlight.get(videoId);
+    if (pending) return pending;
+
+    const request = doResolveVideoInfo(url, videoId).finally(() => {
+        inFlight.delete(videoId);
+    });
+    inFlight.set(videoId, request);
+    return request;
+}
+
+async function doResolveVideoInfo(
+    url: string,
+    videoId: string,
+): Promise<VideoInfo> {
     const cached = await getCache(videoId);
     if (cached) return cached;
 

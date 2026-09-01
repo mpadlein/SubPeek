@@ -30,9 +30,16 @@ function headerTemplate(iconPath: string): TemplateResult {
                     e.stopPropagation();
                     // runtime.openOptionsPage() is not exposed to content
                     // scripts — the background script opens it for us.
-                    browser.runtime.sendMessage({
-                        event: EXTENSION_EVENTS.openOptionsPage,
-                    });
+                    browser.runtime
+                        .sendMessage({
+                            event: EXTENSION_EVENTS.openOptionsPage,
+                        })
+                        .catch((error) => {
+                            logger.error(
+                                "Could not open options page:",
+                                error,
+                            );
+                        });
                 }}
             >
                 ${svgIconTemplate(ICON_SETTINGS, 16)}

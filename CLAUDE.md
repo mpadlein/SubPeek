@@ -23,12 +23,14 @@ There is no test framework configured in this project.
 
 ### Extension Entrypoints (WXT convention: `src/entrypoints/`)
 
-- **Content Script** (`content/index.ts` → `content/main.ts`): Injected into YouTube pages at `document_start`. Uses three `MutationObserver`/`IntersectionObserver` layers:
+- **Content Script** (`content/index.ts` → `content/main.ts`): Injected into YouTube pages at `document_end`. Uses three `MutationObserver`/`IntersectionObserver` layers:
   1. `imgAddedObserver` — `MutationObserver` on `document.documentElement` detecting new `<img>` elements inside `a[href^="/watch?"]` anchors
   2. `intersectionObserver` — defers processing until the thumbnail is visible in the viewport
   3. `srcObserver` — watches `src` attribute changes on already-processed images to handle YouTube SPA navigation (video card recycling)
 
-  For each visible thumbnail, fetches the video page, parses `ytInitialPlayerResponse` for caption/audio track data, and renders badge overlays via `initEmbed()`.
+  For each visible thumbnail, fetches caption/audio track data (InnerTube API first, watch-page `ytInitialPlayerResponse` scraping as fallback) and renders badge overlays via `initEmbed()`.
+
+- **ytcfg Bridge** (`ytcfg-bridge.content.ts`, MAIN world): Reads `ytcfg.data_` (InnerTube context, client name, signature timestamp) from the page's JS context and posts it via `window.postMessage` to the ISOLATED-world listener in `content/youtube/ytcfg.ts` (`whenYtcfgReady()`, 5s timeout → watch-page fallback).
 
 - **Background Script** (`background.ts`): Service worker that manages the IndexedDB video cache (`common/cache.ts`). Content scripts communicate with it via `browser.runtime.sendMessage` using events defined in `common/constants.ts` (get/set cache, clear cache, get cache size). In dev mode, patches `browser.tabs.reload` to a no-op to prevent WXT auto-reload.
 
@@ -71,7 +73,7 @@ Prettier with 4-space indent and `prettier-plugin-organize-imports` (auto-sorts 
 ## Key Conventions
 
 - WXT auto-imports: `defineContentScript`, `defineBackground`, `browser`, `logger` are available globally without imports
-- `logger` utility (`utils/logger.ts`) wraps `console.log` with `[YouTube Extension]` prefix
+- `logger` utility (`utils/logger.ts`) wraps `console.*` with `[YouTubeExtension]` prefix
 - Video cache TTL defaults to 1 hour, configurable via `Settings.cacheTTL`
 - Settings are reactive: components subscribe to changes and re-render automatically
 - Cache timestamps use seconds (not milliseconds): `Date.now() / 1000`
