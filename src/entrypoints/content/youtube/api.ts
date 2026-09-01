@@ -176,7 +176,9 @@ function parseVideoResponse(playerResp: PlayerResponse): VideoInfo {
                 const lastDot = id.lastIndexOf(".");
                 const languageCode = id.substring(0, lastDot);
                 const name: string = item.audioTrack?.displayName;
-                const origin = name?.endsWith("original");
+
+                // `name?.endsWith("original")` is locale-dependent, use `audioIsDefault` instead.
+                const origin = item.item.audioTrack.audioIsDefault;
 
                 return { languageCode, name, origin };
             })
