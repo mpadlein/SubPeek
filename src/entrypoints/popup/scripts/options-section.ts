@@ -8,18 +8,8 @@ export function createOptionsSection(rerender: () => void) {
         );
     }
 
-    function handleRenderEmptyChange(e: Event) {
-        Settings.renderEmpty.set((e.target as HTMLInputElement).checked);
-    }
-
-    function handleRenderAudioChange(e: Event) {
-        Settings.renderAudio.set((e.target as HTMLInputElement).checked);
-    }
-
     return function template() {
         const cacheTTL = Settings.cacheTTL.get().toString();
-        const renderEmpty = Settings.renderEmpty.get();
-        const renderAudio = Settings.renderAudio.get();
 
         return html`
             <section class="settings-card">
@@ -47,42 +37,6 @@ export function createOptionsSection(rerender: () => void) {
                         <option value="43200">12 hours</option>
                         <option value="86400">24 hours</option>
                     </select>
-                </div>
-
-                <div class="option-row">
-                    <div class="option-info">
-                        <label for="render-empty">Render Empty Badges</label>
-                        <span class="option-description"
-                            >Show badges when no captions found</span
-                        >
-                    </div>
-                    <label class="toggle-switch">
-                        <input
-                            type="checkbox"
-                            id="render-empty"
-                            .checked=${renderEmpty}
-                            @change=${handleRenderEmptyChange}
-                        />
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-
-                <div class="option-row">
-                    <div class="option-info">
-                        <label for="render-audio">Render Audio Badges</label>
-                        <span class="option-description"
-                            >Show audio track badges on thumbnails</span
-                        >
-                    </div>
-                    <label class="toggle-switch">
-                        <input
-                            type="checkbox"
-                            id="render-audio"
-                            .checked=${renderAudio}
-                            @change=${handleRenderAudioChange}
-                        />
-                        <span class="toggle-slider"></span>
-                    </label>
                 </div>
             </section>
         `;

@@ -4,8 +4,8 @@ const PREFIX = "SETTINGS:";
 const DEFAULT_SETTINGS = {
     langCodes: ["en", "vi"],
     cacheTTL: 3600,
-    renderEmpty: true,
-    renderAudio: false,
+    renderEmpty: true, // deprecated
+    renderAudio: true, // deprecated
     renderCodeInsteadOfName: true, // deprecated
 };
 
