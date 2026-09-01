@@ -1,10 +1,3 @@
-export interface Settings {
-    langCodes: string[];
-    cacheTTL: number;
-    renderEmpty: boolean;
-    renderAudio: boolean;
-}
-
 export interface CaptionTrack {
     languageCode: string;
     name: string;

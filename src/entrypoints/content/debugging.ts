@@ -64,5 +64,5 @@ function init() {
 }
 
 if (import.meta.env.DEV) {
-    document.addEventListener("DOMContentLoaded", init);
+    init();
 }

@@ -1,32 +1,33 @@
 @use "variables" as *;
 
-// Tooltip
 .#{$prefix}-tooltip {
-	position: relative;
+    position: relative;
 
-	&:hover .ytb2-tooltip__text {
-		visibility: visible;
-		opacity: 1;
-	}
+    &:hover .#{$prefix}-tooltip__text {
+        visibility: visible;
+        opacity: 1;
+    }
 }
 
 .#{$prefix}-tooltip__text {
-	position: absolute;
-	bottom: 100%;
-	left: 50%;
-	transform: translateX(-50%);
-	background: rgba(0, 0, 0, 0.95);
-	color: $color-text;
-	padding: $spacing-xs $spacing-sm;
-	border-radius: $radius-sm;
-	font-size: 12px;
-	font-weight: 400;
-	font-family: $font-stack;
-	z-index: $z-tooltip;
-	visibility: hidden;
-	opacity: 0;
-	white-space: nowrap;
-	pointer-events: none;
-	transition: opacity $transition-fast, visibility $transition-fast;
-	margin-bottom: 4px;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.95);
+    color: $color-text;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-sm;
+    font-size: 12px;
+    font-weight: 400;
+    font-family: $font-stack;
+    z-index: $z-tooltip;
+    visibility: hidden;
+    opacity: 0;
+    white-space: nowrap;
+    pointer-events: none;
+    transition:
+        opacity $transition-fast,
+        visibility $transition-fast;
+    margin-bottom: 4px;
 }

@@ -67,7 +67,7 @@ function sectionTemplate(
         [CSS.ICON_ACTIVE]: hasFavorite,
     };
 
-    const handleClick = (e: Event) => {
+    const open = (e: Event) => {
         if (!tracks) return;
         e.preventDefault();
         e.stopPropagation();
@@ -77,8 +77,30 @@ function sectionTemplate(
         showTrackPopup(target, type, tracks);
     };
 
+    const handleKeydown = (e: KeyboardEvent) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        open(e);
+    };
+
+    // The badge is a div (the SCSS styles it as a flex row), so it needs the
+    // button semantics and keyboard handling spelled out by hand.
+    const typeLabel = type === "cc" ? "Subtitle" : "Audio";
+    const isInteractive = tracks !== null && tracks.length > 0;
+    const label =
+        tracks === null
+            ? `${typeLabel} tracks, loading`
+            : `${typeLabel} tracks: ${tracks.length}`;
+
     return html`
-        <div class="${CSS.ITEM}" @click=${handleClick}>
+        <div
+            class="${CSS.ITEM}"
+            role="button"
+            tabindex=${isInteractive ? "0" : "-1"}
+            aria-label=${label}
+            aria-busy=${tracks === null}
+            @click=${open}
+            @keydown=${handleKeydown}
+        >
             <div class=${classMap(iconClasses)}>${svgIconTemplate(icon)}</div>
             <span class="${CSS.BADGES}">
                 ${badgeListTemplate(tracks, favoriteLangCodes)}

@@ -44,7 +44,6 @@ export const CSS = {
 
     // Modifiers
     MOD_FAVORITE: "is-favorite",
-    MOD_MUTED: "is-muted",
     MOD_TOP: "is-top",
     MOD_BOTTOM: "is-bottom",
 
@@ -63,3 +62,23 @@ export const EVENT = {
     ELEMENT_VISIBLE: `${EVENT_PREFIX}:element-visible`,
     RENDER: `${EVENT_PREFIX}:render`,
 } as const;
+
+/**
+ * window.postMessage types for the MAIN-world <-> ISOLATED-world ytcfg bridge.
+ * Shared by ytcfg-bridge.content.ts (MAIN) and youtube/ytcfg.ts (ISOLATED).
+ */
+export const BRIDGE = {
+    YTCFG_REQUEST: `${EVENT_PREFIX}:ytcfg-request`,
+    YTCFG_RESPONSE: `${EVENT_PREFIX}:ytcfg-response`,
+} as const;
+
+/** Shape passed across the bridge. */
+export interface YtcfgSnapshot {
+    /** ytcfg.data_.INNERTUBE_CONTEXT */
+    context: any;
+    /** ytcfg.data_.INNERTUBE_CONTEXT_CLIENT_NAME — 1 for the WEB client */
+    clientName?: number;
+    /** ytcfg.data_.STS — signature timestamp */
+    sts?: number;
+    loggedIn: boolean;
+}

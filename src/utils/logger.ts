@@ -1,17 +1,16 @@
+const LOG_PREFIX = "[YouTubeExtension]";
+
 export const logger = {
-	log(level: string, ...args: any[]) {
-		console.log(`[YouTube Extension] ${level}:`, ...args);
-	},
-	info(...args: any[]) {
-		this.log("INFO", ...args);
-	},
-	warn(...args: any[]) {
-		this.log("WARN", ...args);
-	},
-	error(...args: any[]) {
-		this.log("ERROR", ...args);
-	},
-	debug(...args: any[]) {
-		this.log("DEBUG", ...args);
-	},
+    info(...args: any[]) {
+        console.info(`${LOG_PREFIX} INFO`, ...args);
+    },
+    warn(...args: any[]) {
+        console.warn(`${LOG_PREFIX} WARN`, ...args);
+    },
+    error(...args: any[]) {
+        console.error(`${LOG_PREFIX} ERROR`, ...args);
+    },
+    debug(...args: any[]) {
+        console.debug(`${LOG_PREFIX} DEBUG`, ...args);
+    },
 };

@@ -69,6 +69,10 @@ export class IDBStore<T> {
                     const request = fn(store);
                     request.onerror = () => reject(request.error);
                     request.onsuccess = () => resolve(request.result);
+                    // Without this the promise never settles when the whole
+                    // transaction aborts (e.g. QuotaExceededError on put).
+                    tx.onabort = () =>
+                        reject(tx.error ?? new Error("Transaction aborted"));
                 }),
         );
     }
@@ -110,6 +114,12 @@ export class IDBStore<T> {
                     };
 
                     tx.oncomplete = () => resolve();
+                    // Only oncomplete resolved this promise, so an aborted or
+                    // errored transaction left it pending forever.
+                    tx.onerror = () =>
+                        reject(tx.error ?? new Error("Transaction failed"));
+                    tx.onabort = () =>
+                        reject(tx.error ?? new Error("Transaction aborted"));
                 }),
         );
     }

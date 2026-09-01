@@ -133,7 +133,7 @@
             border-left: 3px solid $color-favorite;
             padding-left: 9px;
 
-            .ytb2-popup__item-name {
+            .#{$prefix}-popup__item-name {
                 color: $color-primary;
             }
         }
@@ -198,9 +198,15 @@
                 background: $bg-hover-strong;
             }
         }
+
+        &:focus-visible {
+            outline: 2px solid $color-primary;
+            outline-offset: 2px;
+        }
     }
 
-    &.removing {
-        animation: #{$prefix}-removing $transition-fast;
+    &__header-action:focus-visible {
+        outline: 2px solid $color-primary;
+        outline-offset: 2px;
     }
 }

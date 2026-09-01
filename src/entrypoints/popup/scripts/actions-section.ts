@@ -1,17 +1,20 @@
 import { EXTENSION_EVENTS } from "@/common/constants";
-import { formatBytes } from "@/utils/index";
 import { html, nothing } from "lit-html";
 
 export function createActionsSection(rerender: () => void) {
-    let cacheSize = "";
+    let cacheCount: number | null = null;
     let cleared = false;
 
-    function fetchCacheSize() {
+    function fetchCacheStats() {
         browser.runtime
             .sendMessage({ event: EXTENSION_EVENTS.getCacheSize })
-            .then((data: { count: number; size: number }) => {
-                cacheSize = data.size ? formatBytes(data.size, 2) : "";
+            .then((data?: { count?: number }) => {
+                cacheCount = data?.count ?? null;
                 rerender();
+            })
+            .catch((error) => {
+                // Background worker asleep or extension reloading.
+                logger.error("Could not read cache stats:", error);
             });
     }
 
@@ -21,11 +24,11 @@ export function createActionsSection(rerender: () => void) {
         rerender();
         setTimeout(() => {
             cleared = false;
-            fetchCacheSize();
+            fetchCacheStats();
         }, 1500);
     }
 
-    fetchCacheSize();
+    fetchCacheStats();
 
     return function template() {
         return html`
@@ -48,8 +51,11 @@ export function createActionsSection(rerender: () => void) {
                                   />
                               </svg>
                               Clear Cache
-                              ${cacheSize
-                                  ? html`<span>${cacheSize}</span>`
+                              ${cacheCount !== null
+                                  ? html`<span>
+                                        ${cacheCount}
+                                        ${cacheCount === 1 ? "video" : "videos"}
+                                    </span>`
                                   : nothing}
                           `}
                 </button>

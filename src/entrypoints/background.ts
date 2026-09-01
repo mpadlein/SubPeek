@@ -1,5 +1,6 @@
 import { videoCache } from "@/common/cache";
 import { EXTENSION_EVENTS } from "@/common/constants";
+import { browserStorageLocalSV } from "@/common/storage";
 
 async function handleGetCache(
     data: any,
@@ -22,7 +23,7 @@ function handleSetCache(data: any, sendResponse: (response?: any) => void) {
 }
 
 function handleGetCacheSize(data: any, sendResponse: (response?: any) => void) {
-    videoCache.getSizeUsage().then((data) => {
+    videoCache.getStats().then((data) => {
         sendResponse(data);
     });
 }
@@ -33,14 +34,26 @@ function handleClearCache(data: any, sendResponse: (response?: any) => void) {
     });
 }
 
-export default defineBackground(() => {
-    // Enable session storage access from content scripts
-    browser.storage.session.setAccessLevel({
-        accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
-    });
+function handleOpenOptionsPage(
+    data: any,
+    sendResponse: (response?: any) => void,
+) {
+    // Content scripts cannot call runtime.openOptionsPage() themselves.
+    Promise.resolve(browser.runtime.openOptionsPage())
+        .then(() => sendResponse(true))
+        .catch((error) => {
+            logger.error("Failed to open options page:", error);
+            sendResponse(false);
+        });
+}
 
-    // Clean expired cache entries on startup
-    videoCache.cleanExpired();
+export default defineBackground(() => {
+    // Load persisted settings into memory *before* anything reads them —
+    // cleanExpired() needs the user's cacheTTL, not the built-in default.
+    browserStorageLocalSV
+        .ready()
+        .then(() => videoCache.cleanExpired())
+        .catch((error) => logger.error("Startup cache cleanup failed:", error));
 
     // monkey patch to prevent wxt auto reload,
     if (import.meta.env.MODE == "development") {
@@ -61,6 +74,9 @@ export default defineBackground(() => {
                 return true;
             case EXTENSION_EVENTS.clearCache:
                 handleClearCache(data, sendResponse);
+                return true;
+            case EXTENSION_EVENTS.openOptionsPage:
+                handleOpenOptionsPage(data, sendResponse);
                 return true;
         }
         return false;

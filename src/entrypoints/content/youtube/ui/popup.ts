@@ -1,6 +1,7 @@
 import { html, render, type TemplateResult } from "lit-html";
 import { classMap } from "lit-html/directives/class-map.js";
 
+import { EXTENSION_EVENTS } from "@/common/constants";
 import { Settings } from "@/common/settings";
 import type { TrackItem } from "@/common/types";
 import {
@@ -20,12 +21,18 @@ function headerTemplate(iconPath: string): TemplateResult {
         <div class="${CSS.POPUP_HEADER}">
             <div class="${CSS.ICON}">${svgIconTemplate(iconPath)}</div>
             <button
+                type="button"
                 class="${CSS.POPUP_HEADER_ACTION}"
                 title="Open extension options"
+                aria-label="Open extension options"
                 @click=${(e: Event) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    browser.runtime.openOptionsPage();
+                    // runtime.openOptionsPage() is not exposed to content
+                    // scripts — the background script opens it for us.
+                    browser.runtime.sendMessage({
+                        event: EXTENSION_EVENTS.openOptionsPage,
+                    });
                 }}
             >
                 ${svgIconTemplate(ICON_SETTINGS, 16)}
@@ -49,15 +56,22 @@ function trackItemTemplate(
         [CSS.MOD_FAVORITE]: isFavorite,
     };
 
+    const label = `${isFavorite ? "Remove" : "Add"} ${
+        track.name || track.languageCode
+    } ${isFavorite ? "from" : "to"} favorites`;
+
+    const toggle = (e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onToggle(track.languageCode);
+    };
+
     return html`
         <div
             class=${classMap(itemClasses)}
+            role="listitem"
             data-language-code="${track.languageCode}"
-            @click=${(e: Event) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onToggle(track.languageCode);
-            }}
+            @click=${toggle}
         >
             <span class="${CSS.POPUP_ITEM_NAME}">${track.name}</span>
             <div class="${CSS.POPUP_ITEM}-actions">
@@ -65,10 +79,12 @@ function trackItemTemplate(
                     ${track.languageCode}
                 </span>
                 <button
+                    type="button"
                     class=${classMap(actionClasses)}
-                    title=${isFavorite
-                        ? "Remove from favorites"
-                        : "Add to favorites"}
+                    title=${label}
+                    aria-label=${label}
+                    aria-pressed=${isFavorite}
+                    @click=${toggle}
                 >
                     ${svgIconTemplate(ICON_HEART, 14)}
                 </button>
@@ -83,7 +99,7 @@ function listTemplate(
     onToggle: (code: string) => void,
 ): TemplateResult {
     return html`
-        <div class="${CSS.POPUP_LIST}">
+        <div class="${CSS.POPUP_LIST}" role="list">
             ${tracks.map((track) =>
                 trackItemTemplate(
                     track,
@@ -129,16 +145,25 @@ function positionPopup(root: HTMLElement, parent: HTMLElement): void {
 
 // ─── Public API ─────────────────────────────────────────────────────
 
+/** The badge that opened the currently visible popup, if any. */
+let activeSource: HTMLElement | null = null;
+
 export function showTrackPopup(
     parent: HTMLElement,
     type: "cc" | "audio",
     tracks: TrackItem[],
 ): void {
     const existing = document.querySelector(`.${CSS.POPUP}`);
+    const wasSameSource = activeSource === parent;
+
     if (existing) {
         existing.remove();
-        return;
+        activeSource = null;
     }
+
+    // Re-clicking the badge that opened the popup toggles it closed; clicking a
+    // different badge switches straight to that one rather than just closing.
+    if (wasSameSource) return;
 
     if (tracks.length === 0) return;
 
@@ -146,6 +171,11 @@ export function showTrackPopup(
 
     const root = document.createElement("div");
     root.className = CSS.POPUP;
+    root.setAttribute("role", "group");
+    root.setAttribute(
+        "aria-label",
+        type === "cc" ? "Subtitle languages" : "Audio languages",
+    );
     root.onclick = (e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -171,16 +201,31 @@ export function showTrackPopup(
     document.body.appendChild(root);
     positionPopup(root, parent);
     root.style.visibility = "visible";
+    activeSource = parent;
 }
 
 // ─── Global listeners to close popups ───────────────────────────────
 
+function closePopup(): void {
+    document.querySelector(`.${CSS.POPUP}`)?.remove();
+    activeSource = null;
+}
+
 function closePopupOutside(event: Event): void {
     const popup = document.querySelector(`.${CSS.POPUP}`);
     if (popup && !popup.contains(event.target as Node)) {
-        popup.remove();
+        closePopup();
     }
 }
 
+function closePopupOnEscape(event: KeyboardEvent): void {
+    if (event.key !== "Escape") return;
+    const source = activeSource;
+    if (!document.querySelector(`.${CSS.POPUP}`)) return;
+    closePopup();
+    source?.focus();
+}
+
 document.addEventListener("click", closePopupOutside);
+document.addEventListener("keydown", closePopupOnEscape);
 window.addEventListener("scroll", closePopupOutside, true);

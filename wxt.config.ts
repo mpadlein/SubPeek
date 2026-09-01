@@ -10,6 +10,12 @@ export default defineConfig({
             "https://www.youtube.com/*",
             "https://youtube.com/*",
         ],
+        // The settings UI doubles as the options page so the gear button in the
+        // in-page track popup has something to open.
+        options_ui: {
+            page: "popup.html",
+            open_in_tab: true,
+        },
     },
     srcDir: "src",
 });

@@ -2,6 +2,8 @@ import { CSS, EVENT } from "./constants";
 import { metricsProxy } from "./debugging";
 import { initEmbed } from "./youtube/ui/embed";
 
+logger.debug("Content script loaded");
+
 const srcObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
         const img = mutation.target as HTMLImageElement;
@@ -36,12 +38,47 @@ const intersectionObserver = new IntersectionObserver((entries) => {
         }
     }
 });
+
+const setImgTagProcessed = (img: HTMLImageElement) => {
+    img.setAttribute("data-ytbext-processed", "true");
+};
+const removeImgTagProcessed = (img: HTMLImageElement) => {
+    img.removeAttribute("data-ytbext-processed");
+};
+const getImgTagProcessed = (img: HTMLImageElement) => {
+    return img.getAttribute("data-ytbext-processed") === "true";
+};
+
+/**
+ * Images handed to the IntersectionObserver that have not become visible yet.
+ *
+ * IntersectionObserver holds a *strong* reference to every observed target, so
+ * a thumbnail that YouTube discards during infinite scroll before it ever
+ * scrolls into view is kept alive forever. (A WeakRef cannot help: the
+ * observer's own reference is what keeps the element reachable.) Only
+ * unobserve() releases it, so track the pending set and sweep it.
+ */
+const pendingImgs = new Set<HTMLImageElement>();
+const SWEEP_THRESHOLD = 200;
+
+function sweepDetachedImgs() {
+    for (const img of pendingImgs) {
+        if (img.isConnected) continue;
+        intersectionObserver.unobserve(img);
+        pendingImgs.delete(img);
+        removeImgTagProcessed(img);
+    }
+}
+
 function observeImg(img: HTMLImageElement) {
     img.addEventListener(EVENT.ELEMENT_VISIBLE, () => {
+        pendingImgs.delete(img);
         mountOverlay(img);
     });
 
     intersectionObserver.observe(img);
+    pendingImgs.add(img);
+    if (pendingImgs.size > SWEEP_THRESHOLD) sweepDetachedImgs();
     metricsProxy.itsOsv++;
 }
 
@@ -64,19 +101,20 @@ const imgAddedObserver = new MutationObserver((mutations) => {
                             element.getAttribute("href")?.startsWith("/watch?")
                         ) {
                             img = element.querySelector(
-                                "img",
+                                ":not(.ytThumbnailViewModelBlurredImage) > img",
                             ) as HTMLImageElement;
                         }
                         break;
                     default:
                         img = element.querySelector(
-                            'a[href^="/watch?"] img',
+                            'a[href^="/watch?"] :not(.ytThumbnailViewModelBlurredImage) > img',
                         ) as HTMLImageElement;
                         break;
                 }
                 if (!img) return;
-                if (img.getAttribute("processed") === "true") return;
-                img.setAttribute("processed", "true");
+                if (getImgTagProcessed(img)) return;
+                setImgTagProcessed(img);
+
                 observeImg(img);
             });
         }
@@ -131,4 +169,14 @@ export default function start(): void {
         childList: true,
         subtree: true,
     });
+
+    document
+        .querySelectorAll<HTMLImageElement>(
+            'a[href^="/watch?"] :not(.ytThumbnailViewModelBlurredImage) > img',
+        )
+        .forEach((img) => {
+            if (getImgTagProcessed(img)) return;
+            setImgTagProcessed(img);
+            observeImg(img);
+        });
 }

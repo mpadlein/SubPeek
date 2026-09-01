@@ -85,9 +85,9 @@ function sortLanguages(langs: LanguageItem[]) {
 }
 
 export function getPopularLanguages(): LanguageItem[] {
-    const langItems = getLanguageList();
-    sortLanguages(langItems.filter((lang) => lang.isPopular));
-    return langItems;
+    const popular = getLanguageList().filter((lang) => lang.isPopular);
+    sortLanguages(popular);
+    return popular;
 }
 
 export function getLanguagesFilter(filter: string = ""): LanguageItem[] {
@@ -120,10 +120,11 @@ export function getLanguagesFilter(filter: string = ""): LanguageItem[] {
         return { lang, score };
     });
 
-    scoredItems.sort((a, b) => {
-        if (a.score !== b.score) return b.score - a.score;
-        return a.lang.name.localeCompare(b.lang.name);
-    });
+    // Sort by match quality only. Array.sort is stable, so within each score
+    // bucket the favorited -> recommended -> popular -> alphabetical order
+    // established by sortLanguages() above is preserved. Adding a name
+    // tiebreak here would flatten those tiers back to plain alphabetical.
+    scoredItems.sort((a, b) => b.score - a.score);
 
     return scoredItems.map((item) => item.lang);
 }

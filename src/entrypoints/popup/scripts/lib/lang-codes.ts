@@ -239,5 +239,3 @@ export const LANG_CODES: Record<string, string> = {
     yo: "Yoruba",
     zu: "Zulu",
 };
-
-export const LANG_CODES_KEYS = Object.keys(LANG_CODES);
