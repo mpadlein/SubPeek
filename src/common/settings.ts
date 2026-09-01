@@ -2,7 +2,7 @@ import { browserStorageLocalSV } from "./storage";
 
 const PREFIX = "SETTINGS:";
 const DEFAULT_SETTINGS = {
-    langCodes: ["en", "vi"],
+    langCodes: ["en"],
     cacheTTL: 3600,
     renderEmpty: true, // deprecated
     renderAudio: true, // deprecated
@@ -29,8 +29,6 @@ export const Settings = {
         ...createAccessor("langCodes", DEFAULT_SETTINGS.langCodes),
         add: function (s: string) {
             const current = this.get();
-            // Adding an already-favorited code would duplicate the tag in the
-            // popup and make remove()/indexOf() ambiguous.
             if (current.includes(s)) return;
             this.set([...current, s]);
         },
