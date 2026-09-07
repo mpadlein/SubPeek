@@ -133,7 +133,7 @@ export function createFavoritedLanguages(rerender: () => void) {
         return html`
             <div class="favorites-section">
                 <div class="favorites-header">
-                    <span class="favorites-label">Favorited Languages</span>
+                    <span class="favorites-label">Favorite Languages</span>
                     ${langCodes.length > 0
                         ? html`<span class="favorites-count"
                               >${langCodes.length}</span
@@ -176,7 +176,7 @@ export function createFavoritedLanguages(rerender: () => void) {
                     : html`
                           <div class="favorites-empty">
                               <span
-                                  >No favorited languages yet. Search and add
+                                  >No favorite languages yet. Search and add
                                   languages above.</span
                               >
                           </div>
