@@ -4,5 +4,4 @@ export const EXTENSION_EVENTS = {
     openOptionsPage: "openOptionsPage",
 };
 
-/** Video cache entries older than this (seconds) are treated as expired. */
-export const CACHE_TTL_SECONDS = 3600;
+export const CACHE_TTL_SECONDS = 60 * 60;
