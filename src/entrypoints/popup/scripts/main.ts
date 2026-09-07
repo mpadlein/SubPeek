@@ -14,32 +14,9 @@ const actionsTemplate = createActionsSection(() => renderApp());
 function headerTemplate() {
     return html`
         <header class="header">
-            <div class="logo-placeholder">
-                <svg
-                    class="logo-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <rect
-                        x="2"
-                        y="4"
-                        width="20"
-                        height="16"
-                        rx="3"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    />
-                    <path
-                        d="M6 15h4M11 15h7M6 11h8M15 11h3"
-                        stroke="currentColor"
-                        stroke-width="1.5"
-                        stroke-linecap="round"
-                    />
-                </svg>
-            </div>
+            <img class="logo" src="/icon/128.png" alt="SubPeek logo" />
             <div class="header-text">
-                <h1>YT Subtitles</h1>
+                <h1>SubPeek</h1>
                 <span class="version">Settings</span>
             </div>
         </header>

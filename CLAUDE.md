@@ -73,7 +73,7 @@ Prettier with 4-space indent and `prettier-plugin-organize-imports` (auto-sorts 
 ## Key Conventions
 
 - WXT auto-imports: `defineContentScript`, `defineBackground`, `browser`, `logger` are available globally without imports
-- `logger` utility (`utils/logger.ts`) wraps `console.*` with `[YouTubeExtension]` prefix
+- `logger` utility (`utils/logger.ts`) wraps `console.*` with `[SubPeek]` prefix
 - Video cache TTL defaults to 1 hour, configurable via `Settings.cacheTTL`
 - Settings are reactive: components subscribe to changes and re-render automatically
 - Cache timestamps use seconds (not milliseconds): `Date.now() / 1000`

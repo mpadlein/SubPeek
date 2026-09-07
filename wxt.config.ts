@@ -3,8 +3,9 @@ import { defineConfig } from "wxt";
 // See https://wxt.dev/api/config.html
 export default defineConfig({
     manifest: {
-        name: "YouTube Subtitles Extension",
-        description: "Display subtitle availability on YouTube videos",
+        name: "SubPeek - Caption & Dub Labels for YouTube",
+        description:
+            "See which YouTube videos have captions and dubbed audio in your languages, right on the thumbnail.",
         permissions: ["storage"],
         host_permissions: [
             "https://www.youtube.com/*",

@@ -1,4 +1,4 @@
-const LOG_PREFIX = "[YouTubeExtension]";
+const LOG_PREFIX = "[SubPeek]";
 
 export const logger = {
     info(...args: any[]) {

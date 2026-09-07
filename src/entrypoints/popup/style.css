@@ -86,21 +86,9 @@ body {
     margin-bottom: var(--spacing-xs);
 }
 
-.logo-placeholder {
+.logo {
     width: 42px;
     height: 42px;
-    background: linear-gradient(135deg, var(--color-primary), #6366f1);
-    border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: var(--shadow-glow);
-}
-
-.logo-icon {
-    width: 24px;
-    height: 24px;
-    color: white;
 }
 
 .header-text h1 {
