@@ -1,5 +1,6 @@
 import { Settings } from "@/common/settings";
 import { browserStorageLocalSV } from "@/common/storage";
+import { ICON_HEART } from "@/entrypoints/content/constants";
 import { html, render } from "lit-html";
 import { createFavoritedLanguages } from "./favorited-languages";
 import { createLanguageDropdown } from "./language-dropdown";
@@ -24,9 +25,17 @@ function appTemplate() {
         ${headerTemplate()}
         <section class="settings-card">
             <div class="card-header">
-                <h2>Caption Languages</h2>
+                <svg
+                    class="card-header-icon"
+                    viewBox="0 0 24 24"
+                    width="14"
+                    height="14"
+                >
+                    <path d=${ICON_HEART} fill="currentColor" />
+                </svg>
+                <h2>Favorite Languages</h2>
             </div>
-            ${dropdownTemplate()} ${favoritesTemplate()}
+            ${favoritesTemplate()} ${dropdownTemplate()}
         </section>
     `;
 }

@@ -1,5 +1,4 @@
 import { Settings } from "@/common/settings";
-import { tooltip } from "@/common/ui";
 import { html, nothing } from "lit-html";
 import { getNameOfCode } from "./lib/languages";
 
@@ -132,39 +131,6 @@ export function createFavoritedLanguages(rerender: () => void) {
         const langCodes = Settings.langCodes.get();
         return html`
             <div class="favorites-section">
-                <div class="favorites-header">
-                    <span class="favorites-label">Favorite Languages</span>
-                    ${langCodes.length > 0
-                        ? html`<span class="favorites-count"
-                              >${langCodes.length}</span
-                          >`
-                        : nothing}
-                    <span
-                        class="info-icon"
-                        ${tooltip("Language order determines the display order of caption badges on thumbnails. Right-click a language to reorder.")}
-                    >
-                        <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            width="14"
-                            height="14"
-                        >
-                            <circle
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                stroke-width="2"
-                            />
-                            <path
-                                d="M12 16v-4M12 8h.01"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                            />
-                        </svg>
-                    </span>
-                </div>
                 ${langCodes.length > 0
                     ? html`
                           <div class="selected-languages">
@@ -175,10 +141,7 @@ export function createFavoritedLanguages(rerender: () => void) {
                       `
                     : html`
                           <div class="favorites-empty">
-                              <span
-                                  >No favorite languages yet. Search and add
-                                  languages above.</span
-                              >
+                              <span>No favorite languages yet.</span>
                           </div>
                       `}
                 ${contextMenuTemplate()}

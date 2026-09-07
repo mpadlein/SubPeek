@@ -6,6 +6,7 @@ import { LanguageItem } from "./types";
 export function createLanguageDropdown(rerender: () => void) {
     let searchText = "";
     let dropdownOpen = false;
+    let expanded = false;
 
     function handleInput(e: InputEvent) {
         searchText = (e.target as HTMLInputElement).value;
@@ -16,6 +17,14 @@ export function createLanguageDropdown(rerender: () => void) {
     function handleFocus() {
         dropdownOpen = true;
         rerender();
+    }
+
+    function handleExpand() {
+        expanded = true;
+        dropdownOpen = true;
+        rerender();
+        // lit-html renders synchronously, so the input exists now.
+        document.getElementById("language-search")?.focus();
     }
 
     function handleSelect(code: string) {
@@ -57,14 +66,34 @@ export function createLanguageDropdown(rerender: () => void) {
     document.addEventListener("click", (e) => {
         if (
             !(e.target as HTMLElement).closest(".language-selector") &&
-            dropdownOpen
+            (dropdownOpen || expanded)
         ) {
             dropdownOpen = false;
+            expanded = false;
+            searchText = "";
             rerender();
         }
     });
 
     return function template() {
+        if (!expanded) {
+            return html`
+                <div class="language-selector">
+                    <button class="add-language-row" @click=${handleExpand}>
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 5v14M5 12h14"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                            />
+                        </svg>
+                        <span>Add language</span>
+                    </button>
+                </div>
+            `;
+        }
+
         let languages: LanguageItem[] = [];
         if (searchText.length > 0) {
             languages = getLanguagesFilter(searchText);
