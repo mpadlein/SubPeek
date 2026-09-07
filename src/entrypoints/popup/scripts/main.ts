@@ -1,15 +1,11 @@
 import { Settings } from "@/common/settings";
 import { browserStorageLocalSV } from "@/common/storage";
 import { html, render } from "lit-html";
-import { createActionsSection } from "./actions-section";
 import { createFavoritedLanguages } from "./favorited-languages";
 import { createLanguageDropdown } from "./language-dropdown";
-import { createOptionsSection } from "./options-section";
 
 const dropdownTemplate = createLanguageDropdown(() => renderApp());
 const favoritesTemplate = createFavoritedLanguages(() => renderApp());
-const optionsTemplate = createOptionsSection(() => renderApp());
-const actionsTemplate = createActionsSection(() => renderApp());
 
 function headerTemplate() {
     return html`
@@ -32,7 +28,6 @@ function appTemplate() {
             </div>
             ${dropdownTemplate()} ${favoritesTemplate()}
         </section>
-        ${optionsTemplate()} ${actionsTemplate()}
     `;
 }
 
@@ -44,7 +39,4 @@ function renderApp() {
     await browserStorageLocalSV.ready();
     renderApp();
     Settings.langCodes.subscribe(renderApp);
-    Settings.cacheTTL.subscribe(renderApp);
-    Settings.renderEmpty.subscribe(renderApp);
-    Settings.renderAudio.subscribe(renderApp);
 })();

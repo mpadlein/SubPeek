@@ -1,5 +1,4 @@
-import { EXTENSION_EVENTS } from "@/common/constants";
-import { Settings } from "@/common/settings";
+import { CACHE_TTL_SECONDS, EXTENSION_EVENTS } from "@/common/constants";
 import { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
 import pLimit from "p-limit";
 import { metricsProxy } from "../debugging";
@@ -202,7 +201,7 @@ async function getCache(videoId: string): Promise<VideoInfo | null> {
         if (response?.videoId === videoId && response.cacheData) {
             const { data, timestamp } = response.cacheData;
             const age = now - timestamp;
-            if (age < Settings.cacheTTL.get()) {
+            if (age < CACHE_TTL_SECONDS) {
                 metricsProxy.cacheHit++;
                 return data;
             }

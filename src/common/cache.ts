@@ -1,8 +1,8 @@
 /**
  * IndexedDB cache manager for video info
  */
+import { CACHE_TTL_SECONDS } from "./constants";
 import { IDBStore } from "./idb";
-import { Settings } from "./settings";
 import type { CacheEntry, VideoInfo } from "./types";
 
 class VideoCache {
@@ -39,31 +39,13 @@ class VideoCache {
 
     async cleanExpired(): Promise<void> {
         try {
-            const expiredThreshold =
-                Date.now() / 1000 - Settings.cacheTTL.get();
+            const expiredThreshold = Date.now() / 1000 - CACHE_TTL_SECONDS;
             await this.store.deleteByIndexRange(
                 "timestamp",
                 IDBKeyRange.upperBound(expiredThreshold),
             );
         } catch (error) {
             logger.error("VideoCache.cleanExpired error:", error);
-        }
-    }
-
-    async clear(): Promise<void> {
-        try {
-            await this.store.clear();
-        } catch (error) {
-            logger.error("VideoCache.clear error:", error);
-        }
-    }
-
-    async getStats(): Promise<{ count: number | undefined }> {
-        try {
-            return { count: await this.store.count() };
-        } catch (error) {
-            logger.error("VideoCache.getStats error:", error);
-            return { count: undefined };
         }
     }
 }

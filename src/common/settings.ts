@@ -3,7 +3,6 @@ import { browserStorageLocalSV } from "./storage";
 const PREFIX = "SETTINGS:";
 const DEFAULT_SETTINGS = {
     langCodes: ["en"],
-    cacheTTL: 3600,
     renderEmpty: true, // deprecated
     renderAudio: true, // deprecated
     renderCodeInsteadOfName: true, // deprecated
@@ -37,7 +36,6 @@ export const Settings = {
             this.set(updated);
         },
     },
-    cacheTTL: createAccessor("cacheTTL", DEFAULT_SETTINGS.cacheTTL),
     renderEmpty: createAccessor("renderEmpty", DEFAULT_SETTINGS.renderEmpty),
     renderAudio: createAccessor("renderAudio", DEFAULT_SETTINGS.renderAudio),
 

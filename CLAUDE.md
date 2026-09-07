@@ -32,15 +32,15 @@ There is no test framework configured in this project.
 
 - **ytcfg Bridge** (`ytcfg-bridge.content.ts`, MAIN world): Reads `ytcfg.data_` (InnerTube context, client name, signature timestamp) from the page's JS context and posts it via `window.postMessage` to the ISOLATED-world listener in `content/youtube/ytcfg.ts` (`whenYtcfgReady()`, 5s timeout → watch-page fallback).
 
-- **Background Script** (`background.ts`): Service worker that manages the IndexedDB video cache (`common/cache.ts`). Content scripts communicate with it via `browser.runtime.sendMessage` using events defined in `common/constants.ts` (get/set cache, clear cache, get cache size). In dev mode, patches `browser.tabs.reload` to a no-op to prevent WXT auto-reload.
+- **Background Script** (`background.ts`): Service worker that manages the IndexedDB video cache (`common/cache.ts`). Content scripts communicate with it via `browser.runtime.sendMessage` using events defined in `common/constants.ts` (get/set cache). In dev mode, patches `browser.tabs.reload` to a no-op to prevent WXT auto-reload.
 
-- **Popup** (`popup/`): Settings UI (`popup/index.html` + `popup/scripts/main.ts`). Each section (`language-dropdown.ts`, `favorited-languages.ts`, `options-section.ts`, `actions-section.ts`) exports a factory function that takes a `rerender` callback and returns a lit-html template function. This closure pattern lets each section manage local state (e.g., context menu position) while the top-level `renderApp()` re-renders the full popup.
+- **Popup** (`popup/`): Settings UI (`popup/index.html` + `popup/scripts/main.ts`). Each section (`language-dropdown.ts`, `favorited-languages.ts`) exports a factory function that takes a `rerender` callback and returns a lit-html template function. This closure pattern lets each section manage local state (e.g., context menu position) while the top-level `renderApp()` re-renders the full popup.
 
 ### Key Modules
 
 - **`common/types.ts`**: Shared types (`Settings`, `VideoInfo`, `CaptionTrack`, `AudioTrack`, `CacheEntry`, `TrackItem`)
 - **`common/storage.ts`**: `BrowserStorageSync` class — reactive wrapper around `browser.storage.local` with in-memory cache and change listeners. Singleton: `browserStorageLocalSV`. Must call `await browserStorageLocalSV.ready()` before use (loads all keys into memory)
-- **`common/settings.ts`**: Reactive settings accessor API built on `BrowserStorageSync`. Provides `Settings.langCodes`, `Settings.cacheTTL`, `Settings.renderEmpty`, `Settings.renderAudio`, `Settings.renderCodeInsteadOfName` — each with `.get()`, `.set()`, `.subscribe()` methods. `langCodes` additionally has `.add()` and `.remove()` helpers. Keys prefixed with `"SETTINGS:"`
+- **`common/settings.ts`**: Reactive settings accessor API built on `BrowserStorageSync`. Provides `Settings.langCodes` (plus deprecated `renderEmpty`, `renderAudio`, `renderCodeInsteadOfName` accessors) — each with `.get()`, `.set()`, `.subscribe()` methods. `langCodes` additionally has `.add()` and `.remove()` helpers. Keys prefixed with `"SETTINGS:"`
 - **`common/idb.ts`**: Generic `IDBStore<T>` class — Promise-based IndexedDB wrapper with `get`, `put`, `clear`, `count`, and `deleteByIndexRange` methods. Used by `VideoCache`
 - **`common/cache.ts`**: `VideoCache` class — singleton IndexedDB manager for video info, built on `IDBStore`. Used only by the background script
 - **`common/ui/`**: Shared UI components. Currently exports a `tooltip` lit-html directive (`AsyncDirective`) for hover/focus tooltips with configurable position and delay
@@ -74,6 +74,6 @@ Prettier with 4-space indent and `prettier-plugin-organize-imports` (auto-sorts 
 
 - WXT auto-imports: `defineContentScript`, `defineBackground`, `browser`, `logger` are available globally without imports
 - `logger` utility (`utils/logger.ts`) wraps `console.*` with `[SubPeek]` prefix
-- Video cache TTL defaults to 1 hour, configurable via `Settings.cacheTTL`
+- Video cache TTL is a fixed 1 hour (`CACHE_TTL_SECONDS` in `common/constants.ts`)
 - Settings are reactive: components subscribe to changes and re-render automatically
 - Cache timestamps use seconds (not milliseconds): `Date.now() / 1000`
