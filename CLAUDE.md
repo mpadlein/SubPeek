@@ -40,7 +40,7 @@ There is no test framework configured in this project.
 
 - **`common/types.ts`**: Shared types (`Settings`, `VideoInfo`, `CaptionTrack`, `AudioTrack`, `CacheEntry`, `TrackItem`)
 - **`common/storage.ts`**: `BrowserStorageSync` class — reactive wrapper around `browser.storage.local` with in-memory cache and change listeners. Singleton: `browserStorageLocalSV`. Must call `await browserStorageLocalSV.ready()` before use (loads all keys into memory)
-- **`common/settings.ts`**: Reactive settings accessor API built on `BrowserStorageSync`. Provides `Settings.langCodes` (plus deprecated `renderEmpty`, `renderAudio`, `renderCodeInsteadOfName` accessors) — each with `.get()`, `.set()`, `.subscribe()` methods. `langCodes` additionally has `.add()` and `.remove()` helpers. Keys prefixed with `"SETTINGS:"`
+- **`common/settings.ts`**: Reactive settings accessor API built on `BrowserStorageSync`. Provides `Settings.langCodes` with `.get()`, `.set()`, `.subscribe()`, `.add()` and `.remove()` methods. Keys prefixed with `"SETTINGS:"`. The former `renderEmpty`, `renderAudio` and `renderCodeInsteadOfName` settings are no longer user-configurable; their fixed values live in `LEGACY_SETTINGS` (`common/constants.ts`)
 - **`common/idb.ts`**: Generic `IDBStore<T>` class — Promise-based IndexedDB wrapper with `get`, `put`, `clear`, `count`, and `deleteByIndexRange` methods. Used by `VideoCache`
 - **`common/cache.ts`**: `VideoCache` class — singleton IndexedDB manager for video info, built on `IDBStore`. Used only by the background script
 - **`common/ui/`**: Shared UI components. Currently exports a `tooltip` lit-html directive (`AsyncDirective`) for hover/focus tooltips with configurable position and delay
