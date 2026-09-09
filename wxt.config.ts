@@ -17,6 +17,12 @@ export default defineConfig({
             page: "popup.html",
             open_in_tab: true,
         },
+        browser_specific_settings: {
+            gecko: {
+                id: "subpeek@mpadlein",
+                data_collection_permissions: { required: ["none"] },
+            },
+        },
     },
     srcDir: "src",
     zip: {
