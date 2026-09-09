@@ -19,4 +19,14 @@ export default defineConfig({
         },
     },
     srcDir: "src",
+    zip: {
+        // Keep local-only and non-build files out of the AMO sources zip.
+        excludeSources: [
+            "docs/**",
+            ".temp/**",
+            "store-assets/**",
+            "CLAUDE.md",
+            "TODO.md",
+        ],
+    },
 });
