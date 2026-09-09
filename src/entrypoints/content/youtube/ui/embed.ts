@@ -11,7 +11,12 @@ import { svgIconTemplate } from "./utils";
 
 function badgeTemplate(track: TrackItem): TemplateResult {
     return html`
-        <span class="${CSS.BADGE}"> ${track.name || track.languageCode} </span>
+        <span class="${CSS.BADGE} ${CSS.TOOLTIP}">
+            ${track.languageCode.toUpperCase()}
+            <span class="${CSS.TOOLTIP_TEXT}">
+                ${track.name || track.languageCode}
+            </span>
+        </span>
     `;
 }
 
