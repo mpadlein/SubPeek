@@ -3,9 +3,6 @@ import { browserStorageLocalSV } from "./storage";
 const PREFIX = "SETTINGS:";
 const DEFAULT_SETTINGS = {
     langCodes: ["en"],
-    renderEmpty: true, // deprecated
-    renderAudio: true, // deprecated
-    renderCodeInsteadOfName: true, // deprecated
 };
 
 function createAccessor<T>(key: string, defaultValue: T) {
@@ -36,12 +33,4 @@ export const Settings = {
             this.set(updated);
         },
     },
-    renderEmpty: createAccessor("renderEmpty", DEFAULT_SETTINGS.renderEmpty),
-    renderAudio: createAccessor("renderAudio", DEFAULT_SETTINGS.renderAudio),
-
-    // deprecated
-    renderCodeInsteadOfName: createAccessor(
-        "renderCodeInsteadOfName",
-        DEFAULT_SETTINGS.renderCodeInsteadOfName,
-    ),
 };

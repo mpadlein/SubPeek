@@ -10,16 +10,6 @@ import { showTrackPopup } from "./popup";
 import { svgIconTemplate } from "./utils";
 
 function badgeTemplate(track: TrackItem): TemplateResult {
-    if (Settings.renderCodeInsteadOfName.get()) {
-        return html`
-            <span class="${CSS.BADGE} ${CSS.TOOLTIP}">
-                ${track.languageCode.toUpperCase()}
-                <span class="${CSS.TOOLTIP_TEXT}">
-                    ${track.name || track.languageCode}
-                </span>
-            </span>
-        `;
-    }
     return html`
         <span class="${CSS.BADGE}"> ${track.name || track.languageCode} </span>
     `;
@@ -54,10 +44,6 @@ function sectionTemplate(
     type: "cc" | "audio",
     favoriteLangCodes: string[],
 ): TemplateResult {
-    if (!Settings.renderEmpty.get() && tracks !== null && tracks.length === 0) {
-        return html``;
-    }
-
     const hasFavorite =
         tracks?.some((t) => favoriteLangCodes.includes(t.languageCode)) ??
         false;
@@ -117,9 +103,7 @@ function embedTemplate(
 
     return html`
         ${sectionTemplate(captions, ICON_CC, "cc", favCodes)}
-        ${Settings.renderAudio.get()
-            ? sectionTemplate(audioTracks, ICON_AUDIO, "audio", favCodes)
-            : nothing}
+        ${sectionTemplate(audioTracks, ICON_AUDIO, "audio", favCodes)}
     `;
 }
 
@@ -160,11 +144,5 @@ function handleUserLangCodesUpdate() {
 
 Settings.langCodes.subscribe(() => {
     logger.debug("User language codes updated, re-rendering embeds...");
-    handleUserLangCodesUpdate();
-});
-Settings.renderAudio.subscribe(() => {
-    handleUserLangCodesUpdate();
-});
-Settings.renderEmpty.subscribe(() => {
     handleUserLangCodesUpdate();
 });
