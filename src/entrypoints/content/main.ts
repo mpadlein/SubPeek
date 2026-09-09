@@ -150,16 +150,14 @@ function mountOverlay(img: HTMLImageElement) {
     if (!videoUrl) return;
 
     const imgParent = img.parentElement as HTMLElement;
-
-    const wrapper = document.createElement("div");
-    wrapper.classList.add(CSS.THUMBNAIL_WRAPPER);
-
-    try {
-        imgParent.appendChild(wrapper);
-    } catch (error) {
-        logger.error("imgParent not found", img);
+    if (!imgParent) {
         return;
     }
+
+    const wrapper = document.createElement("div");
+    imgParent.appendChild(wrapper);
+
+    wrapper.classList.add(CSS.THUMBNAIL_WRAPPER);
 
     wrapper.appendChild(img);
 
