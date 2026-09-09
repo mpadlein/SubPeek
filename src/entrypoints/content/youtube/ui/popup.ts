@@ -12,13 +12,14 @@ import {
     ICON_SETTINGS,
 } from "../../constants";
 import { sortTrackByFavorite } from "../utils";
-import { svgIconTemplate } from "./utils";
+import { logoTemplate, svgIconTemplate } from "./utils";
 
 // ─── Templates ──────────────────────────────────────────────────────
 
 function headerTemplate(iconPath: string): TemplateResult {
     return html`
         <div class="${CSS.POPUP_HEADER}">
+            <div class="${CSS.POPUP_LOGO}">${logoTemplate(18)}</div>
             <div class="${CSS.ICON}">${svgIconTemplate(iconPath)}</div>
             <button
                 type="button"
@@ -35,10 +36,7 @@ function headerTemplate(iconPath: string): TemplateResult {
                             event: EXTENSION_EVENTS.openOptionsPage,
                         })
                         .catch((error) => {
-                            logger.error(
-                                "Could not open options page:",
-                                error,
-                            );
+                            logger.error("Could not open options page:", error);
                         });
                 }}
             >

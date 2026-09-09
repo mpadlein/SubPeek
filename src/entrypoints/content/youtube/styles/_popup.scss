@@ -28,7 +28,6 @@
     &__header {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         padding: 10px $spacing-md;
         font-size: 13px;
         font-weight: 500;
@@ -37,13 +36,33 @@
         border-bottom: 1px solid $border-light;
         font-family: $font-stack;
         gap: $spacing-sm;
+
+        // Inline SVGs sit on the text baseline and reserve descender space
+        // below, so their wrapper ends up taller than the icon and the icon
+        // rides above center. Block SVGs size their wrapper exactly.
+        svg {
+            display: block;
+        }
     }
 
-    // Header action button
+    // Extension logo at the far left of the header
+    &__logo {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+
+    // Header action button, pushed to the far right
     &__header-action {
         display: flex;
         align-items: center;
         justify-content: center;
+        margin-left: auto;
         width: 24px;
         height: 24px;
         padding: 0;

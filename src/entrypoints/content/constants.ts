@@ -35,6 +35,7 @@ export const CSS = {
     // Popup
     POPUP: `${CSS_PREFIX}-popup`,
     POPUP_HEADER: `${CSS_PREFIX}-popup__header`,
+    POPUP_LOGO: `${CSS_PREFIX}-popup__logo`,
     POPUP_LIST: `${CSS_PREFIX}-popup__list`,
     POPUP_ITEM: `${CSS_PREFIX}-popup__item`,
     POPUP_ITEM_NAME: `${CSS_PREFIX}-popup__item-name`,
