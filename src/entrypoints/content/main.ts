@@ -95,29 +95,28 @@ const imgAddedObserver = new MutationObserver((mutations) => {
                 if (node.nodeType !== Node.ELEMENT_NODE) return;
                 const element = node as HTMLElement;
 
-                let imgs: HTMLImageElement[] | null = null;
+                let imgs: HTMLImageElement[] = [];
                 switch (element.tagName) {
                     case "IMG":
                         if (element.closest('a[href^="/watch?"]')) {
-                            imgs = [element as HTMLImageElement];
+                            imgs.push(element as HTMLImageElement);
                         }
                         break;
                     case "A":
                         if (
                             element.getAttribute("href")?.startsWith("/watch?")
                         ) {
-                            imgs = [
-                                element.querySelector(
-                                    ":not(.ytThumbnailViewModelBlurredImage) > img",
-                                ) as HTMLImageElement,
-                            ];
+                            const img = element.querySelector(
+                                ":not(.ytThumbnailViewModelBlurredImage) > img",
+                            ) as HTMLImageElement;
+                            if (img) imgs.push(img);
                         }
                         break;
                     default:
-                        imgs = Array.from(
-                            element.querySelectorAll(
+                        imgs.push(
+                            ...(element.querySelectorAll(
                                 'a[href^="/watch?"] :not(.ytThumbnailViewModelBlurredImage) > img',
-                            ),
+                            ) as NodeListOf<HTMLImageElement>),
                         );
                         break;
                 }
