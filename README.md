@@ -62,7 +62,7 @@ The bundled Inter font files in `public/fonts/` are the latin and latin-ext woff
 ## How it works
 
 1. A content script watches the page for video thumbnails (`MutationObserver`) and defers work until a thumbnail is actually visible (`IntersectionObserver`)
-2. For each visible video, track data is fetched from YouTube's InnerTube API (the page's own config is read via a MAIN-world bridge script); if that fails, it falls back to scraping `ytInitialPlayerResponse` from the watch page
+2. For each visible video, track data is fetched from YouTube's InnerTube API (the page's own config is read from its inline `ytcfg.set({...})` script); if that fails, it falls back to scraping `ytInitialPlayerResponse` from the watch page
 3. Results are cached in IndexedDB (managed by the background script, 1-hour TTL) and rendered as badge overlays with [lit-html](https://lit.dev/docs/libraries/standalone-templates/)
 
 See `CLAUDE.md` for a fuller architecture walkthrough.
@@ -73,7 +73,6 @@ See `CLAUDE.md` for a fuller architecture walkthrough.
 src/
   entrypoints/
     content/            # Content script: thumbnail detection + badge UI
-    ytcfg-bridge.content.ts  # MAIN-world script reading YouTube's page config
     background.ts       # Service worker: IndexedDB cache
     popup/              # Settings UI (favorite languages)
   common/               # Shared storage, settings, cache, types

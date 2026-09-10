@@ -30,7 +30,7 @@ There is no test framework configured in this project.
 
   For each visible thumbnail, fetches caption/audio track data (InnerTube API first, watch-page `ytInitialPlayerResponse` scraping as fallback) and renders badge overlays via `initEmbed()`.
 
-- **ytcfg Bridge** (`ytcfg-bridge.content.ts`, MAIN world): Reads `ytcfg.data_` (InnerTube context, client name, signature timestamp) from the page's JS context and posts it via `window.postMessage` to the ISOLATED-world listener in `content/youtube/ytcfg.ts` (`whenYtcfgReady()`, 5s timeout → watch-page fallback).
+- **ytcfg Reader** (`content/youtube/ytcfg.ts`): Reads the InnerTube context, client name, signature timestamp and login flag from the page's inline `ytcfg.set({...})` script (the argument is strict JSON) and memoises them. Runs entirely in the isolated world: no main-world code, no `web_accessible_resources`, no CSP or Trusted Types interplay, works on every browser version. `getYtcfg()` is synchronous and returns `null` when nothing usable is found, in which case `api.ts` falls back to scraping the watch page. These values are static for the life of the page (verified across SPA navigations), so they are read once at startup.
 
 - **Background Script** (`background.ts`): Service worker that manages the IndexedDB video cache (`common/cache.ts`). Content scripts communicate with it via `browser.runtime.sendMessage` using events defined in `common/constants.ts` (get/set cache). In dev mode, patches `browser.tabs.reload` to a no-op to prevent WXT auto-reload.
 
