@@ -23,7 +23,7 @@ export function getYtcfg(): YtcfgSnapshot | null {
     if (snapshot === undefined) {
         snapshot = readYtcfg();
         if (snapshot) {
-            logger.debug("ytcfg read from page scripts", snapshot);
+            logger.debug("ytcfg found in page scripts");
         } else {
             logger.warn(
                 "ytcfg not found in page scripts; using watch-page fallback",

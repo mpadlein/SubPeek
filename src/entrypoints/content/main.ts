@@ -95,33 +95,39 @@ const imgAddedObserver = new MutationObserver((mutations) => {
                 if (node.nodeType !== Node.ELEMENT_NODE) return;
                 const element = node as HTMLElement;
 
-                let img: HTMLImageElement | null = null;
+                let imgs: HTMLImageElement[] | null = null;
                 switch (element.tagName) {
                     case "IMG":
                         if (element.closest('a[href^="/watch?"]')) {
-                            img = element as HTMLImageElement;
+                            imgs = [element as HTMLImageElement];
                         }
                         break;
                     case "A":
                         if (
                             element.getAttribute("href")?.startsWith("/watch?")
                         ) {
-                            img = element.querySelector(
-                                ":not(.ytThumbnailViewModelBlurredImage) > img",
-                            ) as HTMLImageElement;
+                            imgs = [
+                                element.querySelector(
+                                    ":not(.ytThumbnailViewModelBlurredImage) > img",
+                                ) as HTMLImageElement,
+                            ];
                         }
                         break;
                     default:
-                        img = element.querySelector(
-                            'a[href^="/watch?"] :not(.ytThumbnailViewModelBlurredImage) > img',
-                        ) as HTMLImageElement;
+                        imgs = Array.from(
+                            element.querySelectorAll(
+                                'a[href^="/watch?"] :not(.ytThumbnailViewModelBlurredImage) > img',
+                            ),
+                        );
                         break;
                 }
-                if (!img) return;
-                if (getImgTagProcessed(img)) return;
-                setImgTagProcessed(img);
 
-                observeImg(img);
+                if (!imgs) return;
+                imgs.forEach((img) => {
+                    if (getImgTagProcessed(img)) return;
+                    setImgTagProcessed(img);
+                    observeImg(img);
+                });
             });
         }
     }

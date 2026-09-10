@@ -14,9 +14,9 @@ function headerTemplate() {
             <img class="logo" src="/icon/128.png" alt="SubPeek logo" />
             <div class="header-text">
                 <h1>SubPeek</h1>
-                <!-- <span class="version"
+                <span class="version"
                     >${browser.runtime.getManifest().version || ""}</span
-                > -->
+                >
             </div>
         </header>
     `;

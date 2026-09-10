@@ -7,7 +7,7 @@ import type { CacheEntry, VideoInfo } from "./types";
 
 class VideoCache {
     private store = new IDBStore<CacheEntry>(
-        "ytb2-video-cache",
+        "subpeek-video-cache",
         "videoInfo",
         1,
         {
