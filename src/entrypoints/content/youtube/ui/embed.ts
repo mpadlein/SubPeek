@@ -114,27 +114,54 @@ function embedTemplate(
 
 // ─── Public API ──────────────────────────────────────────────────────
 
+/**
+ * `loading` shows the spinner, `ready` shows the badges, and `unavailable`
+ * shows nothing at all: the lookup failed (no video id, rate limited, fetch
+ * error, video not playable), so drawing "0 tracks" would be a lie that looks
+ * identical to a video with no captions.
+ */
+type EmbedState =
+    | { kind: "loading" }
+    | { kind: "unavailable" }
+    | { kind: "ready"; captions: CaptionTrack[]; audioTracks: AudioTrack[] };
+
 export async function initEmbed(
     container: HTMLElement,
     videoUrl: string,
 ): Promise<void> {
-    let captionTracks: CaptionTrack[] | null = null;
-    let audioTracks: AudioTrack[] | null = null;
+    let state: EmbedState = { kind: "loading" };
 
     const updateView = () => {
-        render(embedTemplate(captionTracks, audioTracks), container);
+        switch (state.kind) {
+            case "unavailable":
+                render(nothing, container);
+                break;
+            case "loading":
+                render(embedTemplate(null, null), container);
+                break;
+            case "ready":
+                render(
+                    embedTemplate(state.captions, state.audioTracks),
+                    container,
+                );
+                break;
+        }
     };
 
     try {
         const data = await resolveVideoInfo(videoUrl);
-        captionTracks = data.captions.filter((t) => !t.auto);
-        audioTracks = data.audioTracks.filter((t) => !t.origin);
-        sortTrackByFavorite(captionTracks);
-        sortTrackByFavorite(audioTracks);
+        if (data) {
+            const captions = data.captions.filter((t) => !t.auto);
+            const audioTracks = data.audioTracks.filter((t) => !t.origin);
+            sortTrackByFavorite(captions);
+            sortTrackByFavorite(audioTracks);
+            state = { kind: "ready", captions, audioTracks };
+        } else {
+            state = { kind: "unavailable" };
+        }
     } catch (e) {
         logger.error("initEmbed failed:", e);
-        captionTracks = [];
-        audioTracks = [];
+        state = { kind: "unavailable" };
     } finally {
         updateView();
     }

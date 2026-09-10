@@ -5,8 +5,6 @@ import { metricsProxy } from "../debugging";
 import { extractVideoId } from "./utils";
 import { getYtcfg } from "./ytcfg";
 
-const emptyVideoInfo = (): VideoInfo => ({ captions: [], audioTracks: [] });
-
 interface PlayerResponse {
     playabilityStatus?: { status?: string };
     captions?: any;
@@ -177,7 +175,6 @@ function parseVideoResponse(playerResp: PlayerResponse): VideoInfo {
             })
             .filter((t: any) => t?.name && t?.languageCode) || [];
 
-    // Deduplicate audio tracks by name
     const uniqueAudioMap = new Map(audioTracks.map((t) => [t.name, t]));
     audioTracks = Array.from(uniqueAudioMap.values());
 
@@ -219,13 +216,13 @@ async function saveCache(videoId: string, data: VideoInfo): Promise<void> {
  * Collapses concurrent lookups for the same video (a video often appears in
  * several thumbnails at once) into a single cache read + fetch.
  */
-const inFlight = new Map<string, Promise<VideoInfo>>();
+const inFlight = new Map<string, Promise<VideoInfo | null>>();
 
-export function resolveVideoInfo(url: string): Promise<VideoInfo> {
+export function resolveVideoInfo(url: string): Promise<VideoInfo | null> {
     const videoId = extractVideoId(url);
     if (!videoId) {
         logger.warn("Could not extract video ID from URL: " + url);
-        return Promise.resolve(emptyVideoInfo());
+        return Promise.resolve(null);
     }
 
     const pending = inFlight.get(videoId);
@@ -241,16 +238,16 @@ export function resolveVideoInfo(url: string): Promise<VideoInfo> {
 async function doResolveVideoInfo(
     url: string,
     videoId: string,
-): Promise<VideoInfo> {
+): Promise<VideoInfo | null> {
     const cached = await getCache(videoId);
     if (cached) return cached;
 
     const playerResp = await fetchPlayerResponse(url, videoId);
-    if (!playerResp) return emptyVideoInfo();
+    if (!playerResp) return null;
 
     // 200 OK with a non-OK status (private, age-gated, region-blocked) carries no tracks, and is not evidence that the video has none
     const status = playerResp.playabilityStatus?.status;
-    if (status && status !== "OK") return emptyVideoInfo();
+    if (status && status !== "OK") return null;
 
     const videoInfo = parseVideoResponse(playerResp);
 
