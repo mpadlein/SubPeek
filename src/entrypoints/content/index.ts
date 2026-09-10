@@ -1,7 +1,7 @@
 import { browserStorageLocalSV } from "@/common/storage";
 import start from "./main";
 import "./youtube/styles/index.scss";
-import { whenYtcfgReady } from "./youtube/ytcfg";
+import { getYtcfg } from "./youtube/ytcfg";
 
 export default defineContentScript({
     matches: ["https://www.youtube.com/*", "https://youtube.com/*"],
@@ -10,7 +10,8 @@ export default defineContentScript({
 
     async main() {
         await browserStorageLocalSV.ready();
-        await whenYtcfgReady();
+
+        getYtcfg();
         start();
     },
 });

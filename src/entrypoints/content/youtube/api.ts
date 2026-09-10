@@ -3,15 +3,10 @@ import { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
 import pLimit from "p-limit";
 import { metricsProxy } from "../debugging";
 import { extractVideoId } from "./utils";
-import { whenYtcfgReady } from "./ytcfg";
+import { getYtcfg } from "./ytcfg";
 
-/** Fresh empty result — never share one instance, callers may sort in place. */
 const emptyVideoInfo = (): VideoInfo => ({ captions: [], audioTracks: [] });
 
-/**
- * The subset of YouTube's player response this module reads. Loose on purpose:
- * the real payload is enormous and only these branches matter.
- */
 interface PlayerResponse {
     playabilityStatus?: { status?: string };
     captions?: any;
@@ -53,7 +48,7 @@ async function fetchPlayerResponseInnerTube(
 ): Promise<PlayerResponse | null> {
     if (isBackingOff()) return null;
 
-    const cfg = await whenYtcfgReady();
+    const cfg = getYtcfg();
     if (!cfg) throw new Error("ytcfg unavailable");
     const ctx = cfg.context;
 
@@ -63,7 +58,7 @@ async function fetchPlayerResponseInnerTube(
         "X-Youtube-Client-Version": ctx.client.clientVersion,
         "X-Youtube-Bootstrap-Logged-In": String(cfg.loggedIn),
     };
-    // Sending the literal string "undefined" would get the request rejected.
+
     if (ctx.client.visitorData) {
         headers["X-Goog-Visitor-Id"] = ctx.client.visitorData;
     }
@@ -78,8 +73,7 @@ async function fetchPlayerResponseInnerTube(
             body: JSON.stringify({
                 context: ctx,
                 videoId,
-                // contentCheckOk: true,
-                // racyCheckOk: true,
+
                 playbackContext: {
                     contentPlaybackContext: {
                         signatureTimestamp: cfg.sts,

@@ -1,73 +1,91 @@
-import { BRIDGE, type YtcfgSnapshot } from "../constants";
-
-/**
- * ISOLATED-world half of the ytcfg bridge.
- *
- * The listener is registered at module load (document_start), well before
- * ytcfg-bridge.content.ts posts at document_end, so the message can never be
- * missed. Resolves to `null` when the page has no usable config — callers
- * should fall back to scraping the watch page.
- */
-
-/**
- * Safety net for the bridge never reporting at all: a browser that ignores
- * `world: "MAIN"`, or a page where the script failed to run. Without it the
- * content script would wait forever and render no badges.
- */
-const BRIDGE_TIMEOUT_MS = 5_000;
-
-let settle: (value: YtcfgSnapshot | null) => void;
-const ready = new Promise<YtcfgSnapshot | null>((resolve) => {
-    settle = resolve;
-});
-
-let timer: ReturnType<typeof setTimeout>;
-
-function finish(value: YtcfgSnapshot | null) {
-    clearTimeout(timer);
-    window.removeEventListener("message", onMessage);
-    settle(value);
+export interface YtcfgSnapshot {
+    /** ytcfg INNERTUBE_CONTEXT */
+    context: any;
+    /** ytcfg INNERTUBE_CONTEXT_CLIENT_NAME - 1 for the WEB client */
+    clientName?: number;
+    /** ytcfg STS - signature timestamp */
+    sts?: number;
+    loggedIn: boolean;
 }
 
-function onMessage(event: MessageEvent) {
-    // Same-window, same-origin only. The payload never contributes to a URL —
-    // the InnerTube endpoint is built from location.origin — so a spoofed
-    // message can at worst cause a failed request and a fallback.
-    if (event.source !== window) return;
-    if (event.origin !== location.origin) return;
-    if (event.data?.type !== BRIDGE.YTCFG_RESPONSE) return;
+const SET_CALL = /ytcfg\.set\(\s*\{/g;
 
-    const payload = event.data.payload;
+const KEYS = [
+    "INNERTUBE_CONTEXT",
+    "INNERTUBE_CONTEXT_CLIENT_NAME",
+    "STS",
+    "LOGGED_IN",
+] as const;
 
-    if (!payload?.context?.client) {
-        logger.warn(
-            "ytcfg bridge reported no config; using watch-page fallback",
-        );
-        finish(null);
-        return;
+let snapshot: YtcfgSnapshot | null | undefined;
+
+export function getYtcfg(): YtcfgSnapshot | null {
+    if (snapshot === undefined) {
+        snapshot = readYtcfg();
+        if (snapshot) {
+            logger.debug("ytcfg read from page scripts", snapshot);
+        } else {
+            logger.warn(
+                "ytcfg not found in page scripts; using watch-page fallback",
+            );
+        }
+    }
+    return snapshot;
+}
+
+function readYtcfg(): YtcfgSnapshot | null {
+    const data: Partial<Record<(typeof KEYS)[number], any>> = {};
+
+    for (const script of Array.from(document.scripts)) {
+        if (script.src) continue;
+        const text = script.textContent;
+        if (!text || !text.includes("ytcfg.set(")) continue;
+
+        for (const match of text.matchAll(SET_CALL)) {
+            const start = match.index + match[0].length - 1; // the "{"
+            const literal = balancedObject(text, start);
+            if (!literal) continue;
+
+            let parsed: any;
+            try {
+                parsed = JSON.parse(literal);
+            } catch {
+                continue;
+            }
+
+            for (const key of KEYS) {
+                if (key in parsed) data[key] = parsed[key];
+            }
+        }
     }
 
-    logger.debug("ytcfg bridge reported", payload);
+    const context = data.INNERTUBE_CONTEXT;
+    if (!context?.client) return null;
 
-    finish({
-        context: payload.context,
-        clientName: payload.clientName,
-        sts: payload.sts,
-        loggedIn: !!payload.loggedIn,
-    });
+    return {
+        context,
+        clientName: data.INNERTUBE_CONTEXT_CLIENT_NAME,
+        sts: data.STS,
+        loggedIn: !!data.LOGGED_IN,
+    };
 }
 
-window.addEventListener("message", onMessage);
+function balancedObject(text: string, start: number): string | null {
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
 
-timer = setTimeout(() => {
-    logger.warn("ytcfg bridge did not report in; using watch-page fallback");
-    finish(null);
-}, BRIDGE_TIMEOUT_MS);
-
-/**
- * Resolves once the MAIN-world bridge reports in (or the wait times out).
- * Safe to await repeatedly - it is the same promise every time.
- */
-export function whenYtcfgReady(): Promise<YtcfgSnapshot | null> {
-    return ready;
+    for (let i = start; i < text.length; i++) {
+        const ch = text[i];
+        if (inString) {
+            if (escaped) escaped = false;
+            else if (ch === "\\") escaped = true;
+            else if (ch === '"') inString = false;
+            continue;
+        }
+        if (ch === '"') inString = true;
+        else if (ch === "{") depth++;
+        else if (ch === "}" && --depth === 0) return text.slice(start, i + 1);
+    }
+    return null;
 }
