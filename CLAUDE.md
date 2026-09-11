@@ -4,63 +4,83 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Chrome/Firefox browser extension that displays subtitle (caption) and audio track availability on YouTube video thumbnails. Built with the [WXT framework](https://wxt.dev/) (WebExtension Tooling) and TypeScript.
+SubPeek - a Chrome/Firefox browser extension that shows caption (subtitle) and dubbed-audio availability as badge overlays on YouTube video thumbnails. Built with the [WXT framework](https://wxt.dev/) and TypeScript; all UI is rendered with lit-html. Chrome builds target MV3, Firefox builds target MV2.
 
 ## Commands
 
-- `npm run dev` — start dev mode with hot reload (Chrome)
-- `npm run dev:firefox` — start dev mode (Firefox)
-- `npm run build` — production build (Chrome)
-- `npm run build:firefox` — production build (Firefox)
-- `npm run compile` — type-check with `tsc --noEmit`
-- `npm run zip` / `npm run zip:firefox` — package for distribution
+- `npm run dev` / `npm run dev:firefox` - dev mode with hot reload
+- `npm run build` / `npm run build:firefox` - production build into `.output/chrome-mv3/` and `.output/firefox-mv2/`
+- `npm run compile` - type-check with `tsc --noEmit`
+- `npm run zip` / `npm run zip:firefox` - package for distribution; the Firefox zip also emits `.output/subpeek-<version>-sources.zip` for AMO review
 
-After cloning, `npm install` runs `wxt prepare` (postinstall) which generates types in `.wxt/`. If types are missing or stale, run `npx wxt prepare` manually.
+After cloning, `npm install` runs `wxt prepare` (postinstall), which generates types in `.wxt/`. If `@/` imports or the auto-imported globals fail to resolve, run `npx wxt prepare`.
 
-There is no test framework configured in this project.
+There is no test framework. Verify changes by building and loading `.output/chrome-mv3/` (or `.output/firefox-mv2/`) in a browser and watching the console for `[SubPeek]` lines. "ytcfg not found in page scripts" or "fetch PlayerResponseInnerTube error" mean the primary InnerTube path failed and the extension is running on the slower watch-page fallback.
 
 ## Architecture
 
-### Extension Entrypoints (WXT convention: `src/entrypoints/`)
+### Data flow
 
-- **Content Script** (`content/index.ts` → `content/main.ts`): Injected into YouTube pages at `document_end`. Uses three `MutationObserver`/`IntersectionObserver` layers:
-  1. `imgAddedObserver` — `MutationObserver` on `document.documentElement` detecting new `<img>` elements inside `a[href^="/watch?"]` anchors
-  2. `intersectionObserver` — defers processing until the thumbnail is visible in the viewport
-  3. `srcObserver` — watches `src` attribute changes on already-processed images to handle YouTube SPA navigation (video card recycling)
+1. The content script finds thumbnail `<img>`s inside `a[href^="/watch?"]` anchors and waits until they scroll into view.
+2. For each visible thumbnail, `resolveVideoInfo(url)` (`content/youtube/api.ts`) asks the background script for a cached result, otherwise fetches the player response from YouTube and caches it.
+3. `initEmbed()` (`content/youtube/ui/embed.ts`) renders badges for the user's favorite languages into a container overlaid on the thumbnail. Clicking a badge opens an in-page popup (`ui/popup.ts`) listing every track with favorite toggles.
+4. Favorite languages live in `browser.storage.local` (`common/settings.ts`); every embed re-renders when they change.
 
-  For each visible thumbnail, fetches caption/audio track data (InnerTube API first, watch-page `ytInitialPlayerResponse` scraping as fallback) and renders badge overlays via `initEmbed()`.
+### Entrypoints (WXT convention: `src/entrypoints/`)
 
-- **ytcfg Reader** (`content/youtube/ytcfg.ts`): Reads the InnerTube context, client name, signature timestamp and login flag from the page's inline `ytcfg.set({...})` script (the argument is strict JSON) and memoises them. Runs entirely in the isolated world: no main-world code, no `web_accessible_resources`, no CSP or Trusted Types interplay, works on every browser version. `getYtcfg()` is synchronous and returns `null` when nothing usable is found, in which case `api.ts` falls back to scraping the watch page. These values are static for the life of the page (verified across SPA navigations), so they are read once at startup.
+- **Content script** (`content/index.ts` -> `content/main.ts`): injected on youtube.com at `document_end` with `cssInjectionMode: "manifest"`. Three observer layers:
+  1. `imgAddedObserver` - `MutationObserver` on `document.documentElement` detecting new thumbnail `<img>`s (blurred-background images under `.ytThumbnailViewModelBlurredImage` are skipped). Each img is marked with `data-ytbext-processed` so it is only handled once.
+  2. `intersectionObserver` - defers `mountOverlay()` until the thumbnail is visible. `IntersectionObserver` holds strong references to its targets, so images YouTube discards before they become visible are tracked in `pendingImgs` and swept (unobserved) once the set exceeds `SWEEP_THRESHOLD`.
+  3. `srcObserver` - watches `src` changes on mounted images to handle SPA navigation (YouTube recycles video cards); when the anchor href changes, the embed container is replaced and re-initialised.
 
-- **Background Script** (`background.ts`): Service worker that manages the IndexedDB video cache (`common/cache.ts`). Content scripts communicate with it via `browser.runtime.sendMessage` using events defined in `common/constants.ts` (get/set cache). In dev mode, patches `browser.tabs.reload` to a no-op to prevent WXT auto-reload.
+  `mountOverlay()` moves the `<img>` into a `.ytbext-thumbnail-wrapper` div (the container-query root) and appends the badge container as a sibling.
 
-- **Popup** (`popup/`): Settings UI (`popup/index.html` + `popup/scripts/main.ts`). Each section (`language-dropdown.ts`, `favorited-languages.ts`) exports a factory function that takes a `rerender` callback and returns a lit-html template function. This closure pattern lets each section manage local state (e.g., context menu position) while the top-level `renderApp()` re-renders the full popup.
+- **ytcfg reader** (`content/youtube/ytcfg.ts`): reads `INNERTUBE_CONTEXT`, `INNERTUBE_CONTEXT_CLIENT_NAME`, `STS` and `LOGGED_IN` from the page's inline `ytcfg.set({...})` scripts (the argument is strict JSON; a balanced-brace scanner extracts it) and memoises the result. Runs entirely in the isolated world - no main-world script, no `web_accessible_resources`, no CSP or Trusted Types interplay. `getYtcfg()` is synchronous and returns `null` when nothing usable is found. These values are static for the life of the page (verified across SPA navigations), so they are read once at startup.
 
-### Key Modules
+- **Background script** (`background.ts`): service worker that owns the IndexedDB video cache (`common/cache.ts`) and runs `cleanExpired()` at startup. Handles three messages: get cache, set cache, and `openOptionsPage` (content scripts cannot call `runtime.openOptionsPage()` themselves, so the gear button in the in-page popup routes through here). In dev mode it patches `browser.tabs.reload` to a no-op so WXT does not reload YouTube tabs.
 
-- **`common/types.ts`**: Shared types (`Settings`, `VideoInfo`, `CaptionTrack`, `AudioTrack`, `CacheEntry`, `TrackItem`)
-- **`common/storage.ts`**: `BrowserStorageSync` class — reactive wrapper around `browser.storage.local` with in-memory cache and change listeners. Singleton: `browserStorageLocalSV`. Must call `await browserStorageLocalSV.ready()` before use (loads all keys into memory)
-- **`common/settings.ts`**: Reactive settings accessor API built on `BrowserStorageSync`. Provides `Settings.langCodes` with `.get()`, `.set()`, `.subscribe()`, `.add()` and `.remove()` methods. Keys prefixed with `"SETTINGS:"`. The former `renderEmpty`, `renderAudio` and `renderCodeInsteadOfName` settings are no longer user-configurable; their fixed values live in `LEGACY_SETTINGS` (`common/constants.ts`)
-- **`common/idb.ts`**: Generic `IDBStore<T>` class — Promise-based IndexedDB wrapper with `get`, `put`, `clear`, `count`, and `deleteByIndexRange` methods. Used by `VideoCache`
-- **`common/cache.ts`**: `VideoCache` class — singleton IndexedDB manager for video info, built on `IDBStore`. Used only by the background script
-- **`common/ui/`**: Shared UI components. Currently exports a `tooltip` lit-html directive (`AsyncDirective`) for hover/focus tooltips with configurable position and delay
-- **`content/youtube/api.ts`**: Fetches YouTube video pages, parses caption/audio data from `ytInitialPlayerResponse`. Uses `p-limit` to cap concurrent fetches at 4
-- **`content/youtube/ui/embed.ts`**: Renders caption/audio badges on thumbnails using lit-html templates. Subscribes to settings changes for automatic re-rendering via custom `ytbext:render` DOM events
-- **`content/youtube/ui/popup.ts`**: Click-to-expand popup listing all tracks with favorite toggling
-- **`content/constants.ts`**: CSS class names (BEM with `ytbext-` prefix), SVG icon paths, and custom DOM event names
-- **`content/debugging.ts`**: Dev-only (`import.meta.env.DEV`) metrics overlay showing fetch counts, cache hits/misses. Uses a `Proxy` to auto-update the UI on metric changes
+- **Popup / options page** (`popup/`): settings UI for favorite languages. `wxt.config.ts` registers the same page as `options_ui` (opened in a tab) so the in-page gear button has something to open. `main.ts` re-renders the whole app via `renderApp()`; each section (`language-dropdown.ts`, `favorited-languages.ts`) is a factory that takes a `rerender` callback and returns a lit-html template function, keeping local state (search text, context-menu position) in its closure. `lib/lang-codes.ts` is the canonical list of selectable languages; `lib/languages.ts` sorts them favorited -> recommended (English + browser language) -> popular -> alphabetical and uses `iso-639-1` only for native names.
 
-### Content Script ↔ Background Communication
+### Fetching video info (`content/youtube/api.ts`)
 
-Uses `browser.runtime.sendMessage` with an `{ event, data }` message shape. Event names are in `EXTENSION_EVENTS` (`common/constants.ts`). The background script handles cache operations and returns results via `sendResponse`. All message handlers must `return true` to keep the `sendResponse` channel open for async replies.
+- `resolveVideoInfo(url)` is the only export. Concurrent calls for the same video id share one promise (`inFlight` map), since a video often appears in several thumbnails at once.
+- Primary path: POST to `${location.origin}/youtubei/v1/player` with the ytcfg context. The URL must be absolute; Firefox content scripts do not resolve relative fetch URLs. Fallback: fetch the watch page and regex out `ytInitialPlayerResponse`.
+- Both paths go through `p-limit(4)` with a 30 s `AbortSignal.timeout`. A 429 from either source starts a global 5-minute backoff (`RATE_LIMIT_COOLDOWN_MS`) during which every fetch short-circuits to `null`.
+- A `null` result means "unavailable": no video id, rate limited, fetch failed, or `playabilityStatus` is not `OK` (private, age-gated, region-blocked). Callers must not render this as "0 tracks".
+- `parseVideoResponse()` marks ASR captions with `auto: true` and the default audio track with `origin: true`; audio tracks are de-duplicated by language code.
+
+### Rendering (`content/youtube/ui/`)
+
+- `initEmbed()` has three states: `loading` (spinner), `ready` (badges), `unavailable` (renders nothing at all). It filters out auto-generated captions and the original audio track before rendering, so badges only reflect human captions and dubs.
+- Badges are shown only for favorite languages, followed by a `+N` count of the rest. Tooltips are pure CSS (`.ytbext-tooltip` / `.ytbext-tooltip__text`).
+- Each embed container listens for the `ytbext:render` DOM event; `Settings.langCodes.subscribe()` dispatches it to every container when favorites change.
+- `showTrackPopup()` toggles: clicking the badge that opened the popup closes it, clicking another badge switches to it. It also closes on outside click, Escape and scroll. Only one `.ytbext-popup` exists at a time, appended to `document.body`.
+
+### Key modules
+
+- **`common/types.ts`**: `CaptionTrack`, `AudioTrack`, `VideoInfo`, `CacheEntry`, `TrackItem`
+- **`common/storage.ts`**: `BrowserStorageSync` - reactive wrapper around `browser.storage.local` with an in-memory cache and per-key change listeners fed by `storage.onChanged` (so changes made in the popup propagate to content scripts). Singleton `browserStorageLocalSV`; call `await browserStorageLocalSV.ready()` before use
+- **`common/settings.ts`**: `Settings.langCodes` with `.get()`, `.set()`, `.subscribe()`, `.add()` and `.remove()`. Keys are prefixed `SETTINGS:`; the default is `["en"]`
+- **`common/idb.ts`**: generic Promise-based `IDBStore<T>` (`get`, `put`, `clear`, `count`, `deleteByIndexRange`)
+- **`common/cache.ts`**: `VideoCache` singleton built on `IDBStore`, keyed by `videoId` with a `timestamp` index. Used only by the background script
+- **`content/constants.ts`**: BEM class names (`CSS`), custom DOM event names (`EVENT`) and SVG icon paths
+- **`content/debugging.ts`**: dev-only (`import.meta.env.DEV`) metrics overlay (fetch counts, cache hits, rate limits). `metricsProxy` is a `Proxy` that re-renders on every write; production code increments it freely and it is a no-op when the overlay is not mounted
+
+### Content script <-> background communication
+
+`browser.runtime.sendMessage({ event, data })` with event names from `EXTENSION_EVENTS` (`common/constants.ts`). The background replies via `sendResponse`; every handler must `return true` to keep the channel open for the async reply.
 
 ### Styling
 
-SCSS files in `content/youtube/styles/` — injected via manifest (`cssInjectionMode: "manifest"` in WXT config). All CSS classes use the `ytbext-` prefix. Uses container queries for responsive badge scaling based on thumbnail width. Popup styles are in `popup/style.css` (plain CSS).
+- Content-script SCSS lives in `content/youtube/styles/` and is imported by `content/index.ts`; WXT injects the compiled CSS through the manifest. `$prefix` in `_variables.scss` must stay in sync with `CSS_PREFIX` in `content/constants.ts` (both `ytbext`).
+- `.ytbext-thumbnail-wrapper` is a `container-type: inline-size` root; the badge container scales with `@container` queries on thumbnail width.
+- Popup styles are plain CSS in `popup/style.css` using the Inter font bundled in `public/fonts/`. The extension loads no remote resources anywhere.
 
-### UI Rendering
+## Manifest and packaging (`wxt.config.ts`)
 
-Both the content script and the popup settings page use **lit-html** for declarative template rendering (imported from `lit-html`, `lit-html/directives/`, and `lit-html/async-directive.js`). The popup is organized into modular script files under `popup/scripts/` with a shared language library in `popup/scripts/lib/`.
+- Permissions are `storage` plus host permissions for youtube.com only. Keep it that way; the README and store listings promise no data collection.
+- The Firefox-only `browser_specific_settings.gecko` block (add-on id, `data_collection_permissions`) is emitted only when `browser === "firefox"`, because Chrome warns on unknown manifest keys.
+- `zip.excludeSources` keeps `docs/`, `store-assets/`, `CLAUDE.md` and `TODO.md` out of the AMO sources zip. `docs/`, `TODO.md`, `.claude/` and `web-ext.config.ts` are git-ignored local files.
 
 ## Path Aliases
 
@@ -68,12 +88,12 @@ Both the content script and the popup settings page use **lit-html** for declara
 
 ## Formatting
 
-Prettier with 4-space indent and `prettier-plugin-organize-imports` (auto-sorts imports on format).
+Prettier with 4-space indent and `prettier-plugin-organize-imports` (`.prettierrc.json`). There is no npm script; run `npx prettier --write <files>`.
 
 ## Key Conventions
 
-- WXT auto-imports: `defineContentScript`, `defineBackground`, `browser`, `logger` are available globally without imports
-- `logger` utility (`utils/logger.ts`) wraps `console.*` with `[SubPeek]` prefix
-- Video cache TTL is a fixed 1 hour (`CACHE_TTL_SECONDS` in `common/constants.ts`)
-- Settings are reactive: components subscribe to changes and re-render automatically
-- Cache timestamps use seconds (not milliseconds): `Date.now() / 1000`
+- WXT auto-imports: `defineContentScript`, `defineBackground`, `browser` and everything exported from `src/utils/` (notably `logger`) are available without imports
+- `logger` (`utils/logger.ts`) wraps `console.*` with a `[SubPeek]` prefix; use it instead of `console`
+- Cache TTL is a fixed 1 hour (`CACHE_TTL_SECONDS`); cache timestamps are in seconds (`Date.now() / 1000`), not milliseconds
+- Settings are reactive: components subscribe and re-render, they never poll storage
+- Use ASCII hyphens, not en/em dashes, in comments and docs
