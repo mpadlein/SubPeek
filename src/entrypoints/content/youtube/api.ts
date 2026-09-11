@@ -65,6 +65,8 @@ async function fetchPlayerResponseInnerTube(
     const endpoint = `${location.origin}/youtubei/v1/player?prettyPrint=false`;
 
     return fetchLimit(async () => {
+        if (isBackingOff()) return null;
+
         const res = await fetch(endpoint, {
             method: "POST",
             headers,
@@ -80,6 +82,7 @@ async function fetchPlayerResponseInnerTube(
                     },
                 },
             }),
+            signal: AbortSignal.timeout(30_000),
         });
 
         metricsProxy.fetchInnerTube++;
@@ -96,10 +99,9 @@ async function fetchPlayerResponseInnerTube(
 async function fetchPlayerResponseFallback(
     url: string,
 ): Promise<PlayerResponse | null> {
-    if (isBackingOff()) return null;
-
     return fetchLimit(async () => {
-        const res = await fetch(url);
+        if (isBackingOff()) return null;
+        const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
         metricsProxy.fetchFallback++;
 
         if (res.status === 429) {
@@ -175,7 +177,7 @@ function parseVideoResponse(playerResp: PlayerResponse): VideoInfo {
             })
             .filter((t: any) => t?.name && t?.languageCode) || [];
 
-    const uniqueAudioMap = new Map(audioTracks.map((t) => [t.name, t]));
+    const uniqueAudioMap = new Map(audioTracks.map((t) => [t.languageCode, t]));
     audioTracks = Array.from(uniqueAudioMap.values());
 
     return { captions, audioTracks };
@@ -247,7 +249,7 @@ async function doResolveVideoInfo(
 
     // 200 OK with a non-OK status (private, age-gated, region-blocked) carries no tracks, and is not evidence that the video has none
     const status = playerResp.playabilityStatus?.status;
-    if (status && status !== "OK") return null;
+    if (status !== "OK") return null;
 
     const videoInfo = parseVideoResponse(playerResp);
 
