@@ -30,7 +30,7 @@ function getBrowserLanguage(): string {
         return code;
     }
 
-    code = code.split("-")[0];
+    code = code.split("-")[0] as string;
     if (code in LANG_CODES) {
         return code;
     }

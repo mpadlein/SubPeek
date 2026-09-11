@@ -121,7 +121,7 @@ async function fetchPlayerResponseFallback(
         }
 
         try {
-            return JSON.parse(match[1]);
+            return JSON.parse(match[1] as string);
         } catch (error) {
             throw new Error("Could not parse ytInitialPlayerResponse:", {
                 cause: error,

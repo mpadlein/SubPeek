@@ -1,6 +1,6 @@
 import { html, render } from "lit-html";
 
-const metrics: Record<string, number> = {
+const metrics = {
     fetchInnerTube: 0,
     fetchFallback: 0,
     rateLimited: 0,
@@ -12,10 +12,10 @@ const metrics: Record<string, number> = {
 
 export const metricsProxy = new Proxy(metrics, {
     get(target, prop: string) {
-        return prop in target ? target[prop] : 0;
+        return prop in target ? target[prop as keyof typeof target] : 0;
     },
     set(target, prop: string, value) {
-        target[prop] = value;
+        target[prop as keyof typeof target] = value;
         updateMetrics();
         return true;
     },

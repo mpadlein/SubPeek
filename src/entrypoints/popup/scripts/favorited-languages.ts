@@ -19,7 +19,7 @@ export function createFavoritedLanguages(rerender: () => void) {
         const codes = [...Settings.langCodes.get()];
         const i = codes.indexOf(code);
         if (i <= 0) return;
-        [codes[i - 1], codes[i]] = [codes[i], codes[i - 1]];
+        [codes[i - 1], codes[i]] = [codes[i] as string, codes[i - 1] as string];
         Settings.langCodes.set(codes);
         closeMenu();
     }
@@ -28,7 +28,7 @@ export function createFavoritedLanguages(rerender: () => void) {
         const codes = [...Settings.langCodes.get()];
         const i = codes.indexOf(code);
         if (i === -1 || i >= codes.length - 1) return;
-        [codes[i], codes[i + 1]] = [codes[i + 1], codes[i]];
+        [codes[i], codes[i + 1]] = [codes[i + 1] as string, codes[i] as string];
         Settings.langCodes.set(codes);
         closeMenu();
     }
