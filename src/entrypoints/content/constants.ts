@@ -25,6 +25,7 @@ export const CSS = {
     CONTAINER_THUMBNAIL: `${CSS_PREFIX}-embed-container--thumbnail`,
     CORNER_BOTTOM_LEFT: `${CSS_PREFIX}-corner--bottom-left`,
     THUMBNAIL_WRAPPER: `${CSS_PREFIX}-thumbnail-wrapper`,
+    PREVIEW_HOST: `${CSS_PREFIX}-preview-host`,
     ITEM: `${CSS_PREFIX}-item`,
     BADGE: `${CSS_PREFIX}-badge`,
     BADGES: `${CSS_PREFIX}-badges`,

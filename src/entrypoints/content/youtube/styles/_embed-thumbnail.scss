@@ -33,6 +33,18 @@ $icon-opacity-active: 1;
     width: 100%;
 }
 
+// Host for the badge mirrored into YouTube's inline hover preview. It fills
+// the preview's player box and replicates the thumbnail wrapper's geometry so
+// the container queries below pick the same scale as on the card underneath.
+// z-index 10 sits above the preview's player (which is a z-index 0 context).
+.#{$prefix}-preview-host {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    container-type: inline-size;
+    pointer-events: none;
+}
+
 // Container when overlaid on thumbnail
 .#{$prefix}-embed-container--thumbnail {
     position: absolute;
