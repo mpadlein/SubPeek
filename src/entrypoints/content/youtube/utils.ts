@@ -2,9 +2,8 @@
  * Utility functions for URL parsing and DOM helpers
  */
 
-// import { loadSettings } from "@/common/storage";
 import { Settings } from "@/common/settings";
-import { TrackItem } from "@/common/types";
+import type { TrackItem } from "@/common/types";
 
 /**
  * Extract video ID from a YouTube URL

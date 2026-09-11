@@ -1,7 +1,7 @@
 import { Settings } from "@/common/settings";
 import { html, nothing } from "lit-html";
 import { getLanguagesFilter, getPopularLanguages } from "./lib/languages";
-import { LanguageItem } from "./types";
+import { type LanguageItem } from "./types";
 
 export function createLanguageDropdown(rerender: () => void) {
     let searchText = "";
@@ -105,11 +105,7 @@ export function createLanguageDropdown(rerender: () => void) {
         return html`
             <div class="language-selector">
                 <div class="search-container">
-                    <svg
-                        class="search-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                    >
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none">
                         <circle
                             cx="11"
                             cy="11"

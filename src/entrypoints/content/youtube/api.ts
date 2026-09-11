@@ -1,5 +1,5 @@
 import { CACHE_TTL_SECONDS, EXTENSION_EVENTS } from "@/common/constants";
-import { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
+import type { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
 import pLimit from "p-limit";
 import { metricsProxy } from "../debugging";
 import { extractVideoId } from "./utils";

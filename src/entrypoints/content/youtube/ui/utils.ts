@@ -1,4 +1,4 @@
-import { TemplateResult, html } from "lit-html";
+import { type TemplateResult, html } from "lit-html";
 
 export function svgIconTemplate(path: string, size = 18): TemplateResult {
     return html`

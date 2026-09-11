@@ -1,6 +1,6 @@
 import { Settings } from "@/common/settings";
 import ISO6391 from "iso-639-1";
-import { LanguageItem } from "../types";
+import { type LanguageItem } from "../types";
 import { LANG_CODES } from "./lang-codes";
 
 const POPULAR_LANGUAGES = [

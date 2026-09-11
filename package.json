@@ -16,6 +16,7 @@
         "postinstall": "wxt prepare"
     },
     "devDependencies": {
+        "@types/node": "^22.20.2",
         "chrome-types": "^0.1.401",
         "prettier": "^3.7.4",
         "prettier-plugin-organize-imports": "^4.3.0",
