@@ -5,6 +5,8 @@ import { html, render } from "lit-html";
 import { createFavoritedLanguages } from "./favorited-languages";
 import { createLanguageDropdown } from "./language-dropdown";
 
+const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/lein.dev";
+
 const dropdownTemplate = createLanguageDropdown(() => renderApp());
 const favoritesTemplate = createFavoritedLanguages(() => renderApp());
 
@@ -19,6 +21,28 @@ function headerTemplate() {
                 >
             </div>
         </header>
+    `;
+}
+
+function footerTemplate() {
+    return html`
+        <footer class="footer">
+            <a
+                class="footer-link"
+                href=${BUY_ME_A_COFFEE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Support SubPeek on Buy Me a Coffee"
+            >
+                <img
+                    class="footer-badge"
+                    src="/bmc-button.png"
+                    alt="Buy me a coffee"
+                    width="545"
+                    height="153"
+                />
+            </a>
+        </footer>
     `;
 }
 
@@ -39,6 +63,7 @@ function appTemplate() {
             </div>
             ${favoritesTemplate()} ${dropdownTemplate()}
         </section>
+        ${footerTemplate()}
     `;
 }
 

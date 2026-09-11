@@ -26,3 +26,4 @@ Unpacked build output lands in `.output/chrome-mv3/` and `.output/firefox-mv2/`.
 - All third-party code comes from the npm dependencies pinned in `package-lock.json`; nothing else is fetched at build time
 - The extension loads no remote code or resources at runtime; the package is fully self-contained
 - The font files in `public/fonts/` are the latin and latin-ext woff2 subsets of [Inter](https://github.com/rsms/inter), licensed under the SIL Open Font License 1.1 (`public/fonts/OFL.txt`); they are static assets copied into the package as-is
+- `public/bmc-button.png` is the official [Buy Me a Coffee](https://buymeacoffee.com/) button image (their `buttons/v2/default-yellow.png`), bundled as a static asset so the support link in the popup needs no remote request
