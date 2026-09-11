@@ -121,7 +121,6 @@ const imgAddedObserver = new MutationObserver((mutations) => {
                         break;
                 }
 
-                if (!imgs) return;
                 imgs.forEach((img) => {
                     if (getImgTagProcessed(img)) return;
                     setImgTagProcessed(img);

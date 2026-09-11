@@ -59,9 +59,9 @@ function sectionTemplate(
     };
 
     const open = (e: Event) => {
-        if (!tracks) return;
         e.preventDefault();
         e.stopPropagation();
+        if (!tracks) return;
         const target = (e.currentTarget as HTMLElement).closest(
             `.${CSS.ITEM}`,
         ) as HTMLElement;

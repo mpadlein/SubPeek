@@ -55,7 +55,7 @@ export function createLanguageDropdown(rerender: () => void) {
                 </div>
                 <div class="lang-meta">
                     ${lang.isRecommended
-                        ? html`<span class="recommend-badge">Recommend</span>`
+                        ? html`<span class="recommend-badge">Recommended</span>`
                         : nothing}
                     <span class="lang-code">${lang.code}</span>
                 </div>
