@@ -4,4 +4,4 @@ export const EXTENSION_EVENTS = {
     openOptionsPage: "openOptionsPage",
 };
 
-export const CACHE_TTL_SECONDS = 60 * 60;
+export const CACHE_TTL_SECONDS = 60 * 30;
