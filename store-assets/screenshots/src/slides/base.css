@@ -1,0 +1,146 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=block");
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    width: 1280px;
+    height: 800px;
+    overflow: hidden;
+}
+
+body {
+    position: relative;
+    background: #e0202b;
+    color: #fff;
+    font-family: Roboto, Arial, Helvetica, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+}
+
+/* Signature, top right. The icon keeps its own red and gets a white ring so
+   it reads on the red canvas. */
+.brand {
+    position: absolute;
+    top: 44px;
+    right: 72px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.brand svg {
+    width: 30px;
+    height: 30px;
+}
+.brand span {
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+h1 {
+    position: absolute;
+    font-size: 60px;
+    line-height: 1.06;
+    font-weight: 900;
+    letter-spacing: -0.022em;
+}
+
+.lead {
+    position: absolute;
+    font-size: 27px;
+    line-height: 1.38;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.86);
+}
+
+/* A captured piece of the real UI. Everything captured sits on YouTube's
+   dark theme, so the panel ground is that same #0f0f0f. */
+.panel {
+    position: absolute;
+    background: #0f0f0f;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow:
+        0 30px 70px rgba(60, 0, 6, 0.45),
+        0 4px 14px rgba(60, 0, 6, 0.3);
+}
+.panel img {
+    display: block;
+}
+
+/* Magnifier: the badge blown up, white ring, sitting over the canvas. */
+.loupe {
+    position: absolute;
+    border-radius: 18px;
+    border: 5px solid #fff;
+    overflow: hidden;
+    background: #0f0f0f;
+    box-shadow:
+        0 30px 70px rgba(60, 0, 6, 0.5),
+        0 4px 14px rgba(60, 0, 6, 0.35);
+}
+.loupe img {
+    display: block;
+}
+
+/* Leader lines for callouts are drawn in one SVG overlay per slide. */
+.overlay {
+    position: absolute;
+    inset: 0;
+    width: 1280px;
+    height: 800px;
+    pointer-events: none;
+}
+.overlay line,
+.overlay path {
+    stroke: #fff;
+    stroke-width: 3;
+    fill: none;
+    stroke-linecap: round;
+}
+.overlay circle {
+    fill: #fff;
+}
+
+.callout {
+    position: absolute;
+    font-size: 27px;
+    line-height: 1.25;
+    font-weight: 500;
+}
+.callout small {
+    display: block;
+    font-size: 21px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.82);
+    margin-top: 4px;
+}
+
+.note {
+    position: absolute;
+    font-size: 22px;
+    line-height: 1.35;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.checks {
+    position: absolute;
+    display: flex;
+    gap: 40px;
+    font-size: 24px;
+    font-weight: 500;
+}
+.checks div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.checks svg {
+    width: 26px;
+    height: 26px;
+}

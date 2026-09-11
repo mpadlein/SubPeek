@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SubPeek slide 1</title>
+<link rel="stylesheet" href="base.css" />
+<style>
+    h1 { left: 72px; top: 96px; width: 520px; }
+    .lead { left: 72px; top: 318px; width: 420px; }
+    .thumb { left: 616px; top: 104px; width: 592px; height: 332px; border-radius: 14px; }
+    .thumb img { width: 592px; }
+    /* Trim the outer 6 css px on the left and bottom of the 8x crop so the
+       thumbnail's rounded corner does not show as a black wedge. */
+    .loupe { left: 460px; top: 470px; width: 700px; height: 286px; }
+    .loupe img { position: absolute; width: 714px; left: -24px; top: -8px; }
+</style>
+</head>
+<body>
+    <div class="brand">
+        <svg viewBox="0 0 128 128" aria-hidden="true">
+            <rect x="3" y="3" width="122" height="122" rx="32" fill="#e0202b" stroke="#fff" stroke-width="6" />
+            <circle cx="46" cy="56" r="16" fill="#fff" /><circle cx="82" cy="56" r="16" fill="#fff" />
+            <circle cx="52" cy="57" r="7" fill="#0f0f0f" /><circle cx="88" cy="57" r="7" fill="#0f0f0f" />
+            <rect x="18" y="62" width="92" height="46" rx="15" fill="#0f0f0f" />
+            <rect x="30" y="76" width="68" height="9" rx="4.5" fill="#fff" /><rect x="30" y="91" width="68" height="9" rx="4.5" fill="#fff" />
+        </svg>
+        <span>SubPeek</span>
+    </div>
+
+    <h1>See captions and dubs before you click.</h1>
+    <p class="lead">Every YouTube thumbnail gets a label with the subtitle and audio languages it offers.</p>
+
+    <div class="panel thumb"><img src="../captures/search-card-0.png" alt="" /></div>
+
+    <svg class="overlay" viewBox="0 0 1280 800">
+        <rect x="618" y="357" width="194" height="77" rx="9" stroke="#fff" stroke-width="3" fill="none" />
+        <line x1="618" y1="434" x2="460" y2="472" />
+        <line x1="812" y1="434" x2="1160" y2="472" />
+    </svg>
+
+    <div class="loupe"><img src="../captures/badge-8x.png" alt="" /></div>
+</body>
+</html>
