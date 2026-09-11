@@ -3,6 +3,7 @@
 
 import { spawn } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -11,7 +12,8 @@ const SLIDES = path.resolve(process.argv[2] || "slides");
 const OUT = path.resolve(process.argv[3] || "out");
 const ONLY = process.argv[4] ? Number(process.argv[4]) : null;
 const PORT = 9335;
-const PROFILE = path.join(OUT, ".profile");
+// Throwaway browser profile, kept out of the repo and removed on exit.
+const PROFILE = path.join(os.tmpdir(), "subpeek-render-profile");
 fs.mkdirSync(OUT, { recursive: true });
 fs.rmSync(PROFILE, { recursive: true, force: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -106,4 +108,10 @@ try {
     edge.kill();
     await sleep(300);
     spawn("taskkill", ["/F", "/T", "/PID", String(edge.pid)], { stdio: "ignore" });
+    await sleep(800);
+    try {
+        fs.rmSync(PROFILE, { recursive: true, force: true });
+    } catch {
+        // Edge may still hold a lock for a moment; the next run clears it.
+    }
 }

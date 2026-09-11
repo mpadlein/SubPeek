@@ -9,6 +9,11 @@ const EDGE = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
 const EXT = "C:/workspace/projects/ytb/.output/chrome-mv3";
 const OUT = path.resolve(process.argv[2] || "captures");
 const FAVORITES = (process.argv[3] || "en,es,fr").split(",");
+// Search query to load and, optionally, the video id of the card to capture
+// (first card with badges when omitted). The search page shows 500 px cards,
+// the largest YouTube renders, which is what the hero slide wants.
+const QUERY = process.argv[4] || "mrbeast";
+const VIDEO_ID = process.argv[5] || "";
 const PORT = 9334;
 const PROFILE = path.join(OUT, "profile2");
 fs.mkdirSync(OUT, { recursive: true });
@@ -84,7 +89,7 @@ try {
     await evaluate(`chrome.storage.local.set({ "SETTINGS:langCodes": ${JSON.stringify(FAVORITES)} })`);
     await sleep(300);
 
-    await send("Page.navigate", { url: "https://www.youtube.com/results?search_query=mrbeast" });
+    await send("Page.navigate", { url: `https://www.youtube.com/results?search_query=${encodeURIComponent(QUERY)}` });
     const start = Date.now();
     let ready = false;
     while (Date.now() - start < 60000) {
@@ -95,7 +100,13 @@ try {
     console.log("ready", ready);
     await sleep(1500);
     const info = await evaluate(`(() => {
-        const w = document.querySelector('.ytbext-thumbnail-wrapper');
+        const wanted = ${JSON.stringify(VIDEO_ID)};
+        const w = [...document.querySelectorAll('.ytbext-thumbnail-wrapper')].find((el) => {
+            if (!el.querySelector('.ytbext-badge')) return false;
+            const href = el.closest('a[href^="/watch?"]')?.getAttribute('href') || '';
+            return !wanted || href.includes('v=' + wanted);
+        });
+        if (!w) throw new Error('no badge-bearing card found' + (wanted ? ' for video ' + wanted : ''));
         const c = w.parentElement.querySelector('.ytbext-embed-container') || w.querySelector('.ytbext-embed-container');
         const R = (el) => { const r = el.getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, width: r.width, height: r.height }; };
         const items = [...c.querySelectorAll('.ytbext-item')];
@@ -107,7 +118,7 @@ try {
     fs.writeFileSync(path.join(OUT, "badge-geometry.json"), JSON.stringify(info, null, 2));
     const pad = 10;
     await shot("badge-8x.png", { x: info.badge.x - pad, y: info.badge.y - pad, width: info.badge.width + pad * 2, height: info.badge.height + pad * 2 }, 8);
-    await shot("card-4x.png", info.card, 4);
+    await shot("hero-card.png", info.card, 3);
 } catch (e) {
     console.error("FAILED", e);
     process.exitCode = 1;

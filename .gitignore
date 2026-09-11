@@ -31,3 +31,5 @@ t.*
 .claude
 docs
 TODO.md
+out
+.profile

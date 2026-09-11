@@ -1,43 +1,75 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8" />
-<title>SubPeek slide 4</title>
-<link rel="stylesheet" href="base.css" />
-<style>
-    h1 { left: 72px; top: 84px; width: 1000px; }
-    .lead { left: 72px; top: 160px; width: 900px; }
-    .checks { left: 72px; top: 214px; }
-    .grid { left: 72px; top: 272px; width: 1136px; height: 528px; border-radius: 16px 16px 0 0; }
-    /* teded-grid.png is the 2x page capture cropped to css x 118..1254, y 548..1078. */
-    .grid img { width: 1136px; }
-</style>
+    <meta charset="utf-8" />
+    <title>SubPeek slide 4</title>
+    <link rel="stylesheet" href="base.css" />
+    <style>
+        h1 {
+            left: 72px;
+            top: 84px;
+            width: 1000px;
+        }
+
+        .lead {
+            left: 72px;
+            top: 160px;
+            width: 900px;
+        }
+
+        .checks {
+            left: 72px;
+            top: 214px;
+        }
+
+        .grid {
+            left: 72px;
+            top: 272px;
+            width: 1136px;
+            height: 528px;
+            border-radius: 16px 16px 0 0;
+        }
+
+        /* teded-grid.png is the 2x page capture cropped to css x 118..1254, y 548..1078. */
+        .grid img {
+            width: 1136px;
+        }
+    </style>
 </head>
+
 <body>
     <div class="brand">
         <svg viewBox="0 0 128 128" aria-hidden="true">
             <rect x="3" y="3" width="122" height="122" rx="32" fill="#e0202b" stroke="#fff" stroke-width="6" />
-            <circle cx="46" cy="56" r="16" fill="#fff" /><circle cx="82" cy="56" r="16" fill="#fff" />
-            <circle cx="52" cy="57" r="7" fill="#0f0f0f" /><circle cx="88" cy="57" r="7" fill="#0f0f0f" />
+            <circle cx="46" cy="56" r="16" fill="#fff" />
+            <circle cx="82" cy="56" r="16" fill="#fff" />
+            <circle cx="52" cy="57" r="7" fill="#0f0f0f" />
+            <circle cx="88" cy="57" r="7" fill="#0f0f0f" />
             <rect x="18" y="62" width="92" height="46" rx="15" fill="#0f0f0f" />
-            <rect x="30" y="76" width="68" height="9" rx="4.5" fill="#fff" /><rect x="30" y="91" width="68" height="9" rx="4.5" fill="#fff" />
+            <rect x="30" y="76" width="68" height="9" rx="4.5" fill="#fff" />
+            <rect x="30" y="91" width="68" height="9" rx="4.5" fill="#fff" />
         </svg>
         <span>SubPeek</span>
     </div>
 
     <h1>Works on every YouTube page.</h1>
-    <p class="lead">Home, search, subscriptions and channel pages.</p>
+    <p class="lead">Home, search and channel pages.</p>
     <div class="checks">
         <div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+            </svg>
             <span>No data collected</span>
         </div>
-        <div>
+        <!-- <div>
             <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
             <span>Runs only on youtube.com</span>
-        </div>
+        </div> -->
     </div>
 
     <div class="panel grid"><img src="../captures/teded-grid.png" alt="" /></div>
 </body>
+
 </html>

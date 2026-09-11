@@ -13,9 +13,12 @@ body {
     overflow: hidden;
 }
 
+/* Deep navy canvas: the complement of the SubPeek red, so the logo and the
+   favorite-heart red pop, while the dark YouTube panels still read as panels
+   and the blue language codes stay on-palette. */
 body {
     position: relative;
-    background: #e0202b;
+    background: #16213e;
     color: #fff;
     font-family: Roboto, Arial, Helvetica, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -23,7 +26,7 @@ body {
 }
 
 /* Signature, top right. The icon keeps its own red and gets a white ring so
-   it reads on the red canvas. */
+   it reads at this size. */
 .brand {
     position: absolute;
     top: 44px;
@@ -65,9 +68,11 @@ h1 {
     background: #0f0f0f;
     border-radius: 16px;
     overflow: hidden;
+    outline: 1px solid rgba(255, 255, 255, 0.1);
+    outline-offset: -1px;
     box-shadow:
-        0 30px 70px rgba(60, 0, 6, 0.45),
-        0 4px 14px rgba(60, 0, 6, 0.3);
+        0 30px 70px rgba(0, 0, 0, 0.55),
+        0 4px 14px rgba(0, 0, 0, 0.35);
 }
 .panel img {
     display: block;
@@ -81,8 +86,8 @@ h1 {
     overflow: hidden;
     background: #0f0f0f;
     box-shadow:
-        0 30px 70px rgba(60, 0, 6, 0.5),
-        0 4px 14px rgba(60, 0, 6, 0.35);
+        0 30px 70px rgba(0, 0, 0, 0.6),
+        0 4px 14px rgba(0, 0, 0, 0.4);
 }
 .loupe img {
     display: block;

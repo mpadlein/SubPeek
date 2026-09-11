@@ -17,17 +17,25 @@ each script.
 
 ```sh
 node store-assets/screenshots/src/capture.mjs  store-assets/screenshots/src/captures en,es,fr
-node store-assets/screenshots/src/capture2.mjs store-assets/screenshots/src/captures en,es,fr
-node store-assets/screenshots/src/render.mjs   store-assets/screenshots/src/slides store-assets/screenshots
+node store-assets/screenshots/src/capture2.mjs store-assets/screenshots/src/captures en,es,fr "mrbeast escape 100 cops" Qtl8lJwbd4g
+npm run screenshots
 ```
+
+`npm run screenshots` is the render step (`src/render.mjs` with the two
+folders above). To re-render one slide while editing copy, call the script
+directly and add the slide number: `node store-assets/screenshots/src/render.mjs
+store-assets/screenshots/src/slides store-assets/screenshots 3`.
 
 - `capture.mjs` presets the favorite languages (third argument), then captures
   live badges on the MrBeast and TED-Ed channel grids and the search page, the
   in-page track popup (not used by any slide), and the settings page. Crops are
   3x, settings 9x.
-- `capture2.mjs` captures one badge on its own at 8x (slides 1 and 2) and
-  writes `badge-geometry.json`, whose numbers drive the callout positions in
-  `slide-2.html`.
+- `capture2.mjs` searches YouTube for the fourth argument, picks the card
+  whose video id is the fifth argument (any badge-bearing card when omitted),
+  and saves it as `hero-card.png` (3x, slide 1) plus its badge alone as
+  `badge-8x.png` (8x, slides 1 and 2). It also writes `badge-geometry.json`,
+  whose numbers drive the callout positions in `slide-2.html`. Pick a video
+  with a friendly thumbnail; the hero is the first thing store visitors see.
 - `render.mjs` opens each `slides/slide-N.html` at 1280x800 and saves
   `screenshot-N-1280x800.png`. Roboto is fetched from Google Fonts at render
   time only; nothing in the extension changes.

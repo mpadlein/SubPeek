@@ -1,36 +1,73 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8" />
-<title>SubPeek slide 3</title>
-<link rel="stylesheet" href="base.css" />
-<style>
-    h1 { left: 72px; top: 96px; width: 600px; }
-    .lead { left: 72px; top: 256px; width: 560px; }
-    .settings { left: 836px; top: 96px; width: 372px; height: 643px; }
-    .settings img { width: 372px; }
-    /* A real card with the same three favorites lit up, so the link between
+    <meta charset="utf-8" />
+    <title>SubPeek slide 3</title>
+    <link rel="stylesheet" href="base.css" />
+    <style>
+        h1 {
+            left: 72px;
+            top: 96px;
+            width: 600px;
+        }
+
+        .lead {
+            left: 72px;
+            top: 256px;
+            width: 560px;
+        }
+
+        .settings {
+            left: 836px;
+            top: 96px;
+            width: 372px;
+            height: 643px;
+        }
+
+        .settings img {
+            width: 372px;
+        }
+
+        /* A real card with the same three favorites lit up, so the link between
        the list and the badge is visible. */
-    .thumb { left: 72px; top: 448px; width: 500px; height: 281px; border-radius: 14px; }
-    .thumb img { width: 500px; }
-</style>
+        .thumb {
+            left: 72px;
+            top: 448px;
+            width: 500px;
+            height: 281px;
+            border-radius: 14px;
+        }
+
+        .thumb img {
+            width: 500px;
+        }
+    </style>
 </head>
+
 <body>
     <div class="brand">
         <svg viewBox="0 0 128 128" aria-hidden="true">
             <rect x="3" y="3" width="122" height="122" rx="32" fill="#e0202b" stroke="#fff" stroke-width="6" />
-            <circle cx="46" cy="56" r="16" fill="#fff" /><circle cx="82" cy="56" r="16" fill="#fff" />
-            <circle cx="52" cy="57" r="7" fill="#0f0f0f" /><circle cx="88" cy="57" r="7" fill="#0f0f0f" />
+            <circle cx="46" cy="56" r="16" fill="#fff" />
+            <circle cx="82" cy="56" r="16" fill="#fff" />
+            <circle cx="52" cy="57" r="7" fill="#0f0f0f" />
+            <circle cx="88" cy="57" r="7" fill="#0f0f0f" />
             <rect x="18" y="62" width="92" height="46" rx="15" fill="#0f0f0f" />
-            <rect x="30" y="76" width="68" height="9" rx="4.5" fill="#fff" /><rect x="30" y="91" width="68" height="9" rx="4.5" fill="#fff" />
+            <rect x="30" y="76" width="68" height="9" rx="4.5" fill="#fff" />
+            <rect x="30" y="91" width="68" height="9" rx="4.5" fill="#fff" />
         </svg>
         <span>SubPeek</span>
     </div>
 
     <h1>Pick your languages once.</h1>
-    <p class="lead">They light up on every thumbnail and sort to the top of every list. Search the full language list, popular ones first.</p>
+    <p class="lead">They light up on every thumbnail
+        <!-- and sort to the top of every list
+        . Search the full language list, popular ones first. -->
+    </p>
 
     <div class="panel settings"><img src="../captures/settings-dropdown.png" alt="" /></div>
     <div class="panel thumb"><img src="../captures/grid-card-2.png" alt="" /></div>
 </body>
+
 </html>

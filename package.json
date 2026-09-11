@@ -13,7 +13,8 @@
         "zip": "wxt zip",
         "zip:firefox": "wxt zip -b firefox",
         "compile": "tsc --noEmit",
-        "postinstall": "wxt prepare"
+        "postinstall": "wxt prepare",
+        "screenshots": "node store-assets/screenshots/src/render.mjs store-assets/screenshots/src/slides store-assets/screenshots"
     },
     "devDependencies": {
         "@types/node": "^22.20.2",
