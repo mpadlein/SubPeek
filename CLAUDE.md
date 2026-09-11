@@ -47,7 +47,7 @@ There is no test framework. Verify changes by building and loading `.output/chro
 - Primary path: POST to `${location.origin}/youtubei/v1/player` with the ytcfg context. The URL must be absolute; Firefox content scripts do not resolve relative fetch URLs. Fallback: fetch the watch page and regex out `ytInitialPlayerResponse`.
 - Both paths go through `p-limit(4)` with a 30 s `AbortSignal.timeout`. A 429 from either source starts a global 5-minute backoff (`RATE_LIMIT_COOLDOWN_MS`) during which every fetch short-circuits to `null`.
 - A `null` result means "unavailable": no video id, rate limited, fetch failed, or `playabilityStatus` is not `OK` (private, age-gated, region-blocked). Callers must not render this as "0 tracks".
-- `parseVideoResponse()` marks ASR captions with `auto: true` and the default audio track with `origin: true`; audio tracks are de-duplicated by language code.
+- `parseVideoResponse()` marks ASR captions with `auto: true` and the original audio track with `origin: true`; audio tracks are de-duplicated by language code. The original is identified by the `audioTrack.id` suffix (`<lang>.4`; `.3` is a creator dub, `.10` a YouTube auto-dub). Do not use `audioIsDefault` for this: it marks the track YouTube auto-plays for the viewer's UI language, which on a non-English video viewed in English is the English dub. `displayName` is localised, so matching "original" does not work either.
 
 ### Rendering (`content/youtube/ui/`)
 

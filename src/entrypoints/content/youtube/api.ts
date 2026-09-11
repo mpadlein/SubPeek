@@ -13,6 +13,12 @@ interface PlayerResponse {
 
 const fetchLimit = pLimit(4);
 
+/**
+ * Suffix of `audioTrack.id` for the video's original audio. Observed values:
+ * 4 = original, 3 = dubbed by the creator, 10 = auto-dubbed by YouTube.
+ */
+const ORIGINAL_AUDIO_TRACK_TYPE = "4";
+
 // handle 429
 const RATE_LIMIT_COOLDOWN_MS = 5 * 60_000;
 let backoffUntil = 0;
@@ -166,12 +172,19 @@ function parseVideoResponse(playerResp: PlayerResponse): VideoInfo {
                 const id = item.audioTrack?.id;
                 if (!id) return null;
 
+                // id is "<languageCode>.<trackType>", e.g. "es-US.4", "en-US.10"
                 const lastDot = id.lastIndexOf(".");
                 const languageCode = id.substring(0, lastDot);
+                const trackType = id.substring(lastDot + 1);
                 const name: string = item.audioTrack?.displayName;
 
-                // `name?.endsWith("original")` is locale-dependent, use `audioIsDefault` instead.
-                const origin = item.audioTrack?.audioIsDefault;
+                // Neither `displayName` nor `audioIsDefault` identifies the
+                // original: the name is localised ("English original",
+                // "英語（オリジナル）") and `audioIsDefault` marks the track
+                // YouTube auto-plays for the viewer's UI language, which on a
+                // Spanish video viewed in English is the English dub. The
+                // track type in the id is the only locale-independent signal.
+                const origin = trackType === ORIGINAL_AUDIO_TRACK_TYPE;
 
                 return { languageCode, name, origin };
             })
