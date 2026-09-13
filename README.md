@@ -25,7 +25,7 @@ Permissions: `storage` plus host access to `youtube.com` only.
 
 ## Install
 
-- Chrome Web Store: [SubPeek - Caption & Dub Labels for YouTube](https://chromewebstore.google.com/detail/cnkfniefdmiiphamafjjeengnjpkfeea?utm_source=item-share-cb) (also works in Edge and other Chromium browsers)
+- Chrome Web Store: [SubPeek - Caption & Dub Labels for YouTube](https://chromewebstore.google.com/detail/cnkfniefdmiiphamafjjeengnjpkfeea?utm_source=github-readme) (also works in Edge and other Chromium browsers)
 - Firefox Add-ons (AMO): coming soon
 
 ## Development
