@@ -1,4 +1,5 @@
 import { CACHE_TTL_SECONDS, EXTENSION_EVENTS } from "@/common/constants";
+import { Settings } from "@/common/settings";
 import type { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
 import pLimit from "p-limit";
 import { metricsProxy } from "../debugging";
@@ -42,6 +43,14 @@ function handle429(source: string): void {
 }
 
 /**
+ * Checked again inside the p-limit task, not just before queueing: a request
+ * queued moments before the user turned SubPeek off must not go out.
+ */
+function shouldSkipFetch(): boolean {
+    return isBackingOff() || !Settings.enabled.get();
+}
+
+/**
  * Fetch the player response over InnerTube.
  *
  * Returns `null` to mean "stop, do not escalate" (rate limited). Throws to mean
@@ -50,7 +59,7 @@ function handle429(source: string): void {
 async function fetchPlayerResponseInnerTube(
     videoId: string,
 ): Promise<PlayerResponse | null> {
-    if (isBackingOff()) return null;
+    if (shouldSkipFetch()) return null;
 
     const cfg = getYtcfg();
     if (!cfg) throw new Error("ytcfg unavailable");
@@ -71,7 +80,7 @@ async function fetchPlayerResponseInnerTube(
     const endpoint = `${location.origin}/youtubei/v1/player?prettyPrint=false`;
 
     return fetchLimit(async () => {
-        if (isBackingOff()) return null;
+        if (shouldSkipFetch()) return null;
 
         const res = await fetch(endpoint, {
             method: "POST",
@@ -106,7 +115,7 @@ async function fetchPlayerResponseFallback(
     url: string,
 ): Promise<PlayerResponse | null> {
     return fetchLimit(async () => {
-        if (isBackingOff()) return null;
+        if (shouldSkipFetch()) return null;
         const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
         metricsProxy.fetchFallback++;
 

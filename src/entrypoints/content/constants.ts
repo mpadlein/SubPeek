@@ -15,6 +15,9 @@ export const ICON_HEART =
 export const ICON_SETTINGS =
     "M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z";
 
+export const ICON_POWER =
+    "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z";
+
 // CSS Class Prefixes (BEM)
 export const CSS_PREFIX = "ytbext";
 
@@ -42,7 +45,9 @@ export const CSS = {
     POPUP_ITEM_NAME: `${CSS_PREFIX}-popup__item-name`,
     POPUP_ITEM_CODE: `${CSS_PREFIX}-popup__item-code`,
     POPUP_ITEM_ACTION: `${CSS_PREFIX}-popup__item-action`,
+    POPUP_HEADER_ACTIONS: `${CSS_PREFIX}-popup__header-actions`,
     POPUP_HEADER_ACTION: `${CSS_PREFIX}-popup__header-action`,
+    POPUP_HEADER_ACTION_DANGER: `${CSS_PREFIX}-popup__header-action--danger`,
 
     // Modifiers
     MOD_FAVORITE: "is-favorite",
@@ -61,6 +66,5 @@ export const CSS = {
 
 const EVENT_PREFIX = "ytbext";
 export const EVENT = {
-    ELEMENT_VISIBLE: `${EVENT_PREFIX}:element-visible`,
     RENDER: `${EVENT_PREFIX}:render`,
 } as const;

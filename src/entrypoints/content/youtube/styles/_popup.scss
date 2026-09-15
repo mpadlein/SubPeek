@@ -57,12 +57,18 @@
         }
     }
 
-    // Header action button, pushed to the far right
+    // Header action buttons, grouped at the far right
+    &__header-actions {
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+        margin-left: auto;
+    }
+
     &__header-action {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-left: auto;
         width: 24px;
         height: 24px;
         padding: 0;
@@ -83,6 +89,14 @@
         &:hover {
             background: $bg-hover-strong;
             color: $color-text;
+        }
+
+        // Turn-off button: muted at rest like the gear, red once the pointer
+        // commits to it. Red at rest would read as another favorite heart.
+        &--danger:hover,
+        &--danger:focus-visible {
+            background: $bg-danger-hover;
+            color: $color-danger;
         }
     }
 

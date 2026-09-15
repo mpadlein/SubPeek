@@ -2,6 +2,7 @@ import { browserStorageLocalSV } from "./storage";
 
 const PREFIX = "SETTINGS:";
 const DEFAULT_SETTINGS = {
+    enabled: true,
     langCodes: ["en"],
 };
 
@@ -21,6 +22,7 @@ function createAccessor<T>(key: string, defaultValue: T) {
 }
 
 export const Settings = {
+    enabled: createAccessor("enabled", DEFAULT_SETTINGS.enabled),
     langCodes: {
         ...createAccessor("langCodes", DEFAULT_SETTINGS.langCodes),
         add: function (s: string) {

@@ -12,6 +12,7 @@ A Chrome/Firefox browser extension that shows which YouTube videos have captions
 - **Favorite languages**: pick the languages you care about; matching tracks are highlighted and sorted first
 - **Track popup**: click a badge to see the full list of caption/audio languages for that video and toggle favorites inline
 - **Fast and polite**: results are cached locally for 30 minutes, lookups only run for thumbnails that actually scroll into view, and concurrent requests are capped with rate-limit backoff
+- **One-click off switch**: flip the toggle in the toolbar popup (or the power button in the track popup) and SubPeek removes its badges and stops all lookups until you turn it back on
 
 ## Privacy
 

@@ -1,6 +1,7 @@
-import { CSS, EVENT } from "./constants";
+import { CSS } from "./constants";
 import { metricsProxy } from "./debugging";
 import { initEmbed } from "./youtube/ui/embed";
+import { closePopup } from "./youtube/ui/popup";
 
 logger.debug("Content script loaded");
 
@@ -28,25 +29,15 @@ const srcObserver = new MutationObserver((mutations) => {
     }
 });
 
-const intersectionObserver = new IntersectionObserver((entries) => {
-    for (const entry of entries) {
-        if (entry.isIntersecting) {
-            metricsProxy.itsOsvMatch++;
-            const element = entry.target as HTMLElement;
-            element.dispatchEvent(new CustomEvent(EVENT.ELEMENT_VISIBLE));
-            intersectionObserver.unobserve(element);
-        }
-    }
-});
-
+const PROCESSED_ATTR = "data-ytbext-processed";
 const setImgTagProcessed = (img: HTMLImageElement) => {
-    img.setAttribute("data-ytbext-processed", "true");
+    img.setAttribute(PROCESSED_ATTR, "true");
 };
 const removeImgTagProcessed = (img: HTMLImageElement) => {
-    img.removeAttribute("data-ytbext-processed");
+    img.removeAttribute(PROCESSED_ATTR);
 };
 const getImgTagProcessed = (img: HTMLImageElement) => {
-    return img.getAttribute("data-ytbext-processed") === "true";
+    return img.getAttribute(PROCESSED_ATTR) === "true";
 };
 
 /**
@@ -61,6 +52,21 @@ const getImgTagProcessed = (img: HTMLImageElement) => {
 const pendingImgs = new Set<HTMLImageElement>();
 const SWEEP_THRESHOLD = 200;
 
+// Mounts directly rather than via a per-image event listener: stop() has no
+// handle on such listeners, and a stale one surviving a stop/start cycle
+// would double-mount next to the fresh one.
+const intersectionObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+        if (entry.isIntersecting) {
+            metricsProxy.itsOsvMatch++;
+            const img = entry.target as HTMLImageElement;
+            intersectionObserver.unobserve(img);
+            pendingImgs.delete(img);
+            mountOverlay(img);
+        }
+    }
+});
+
 function sweepDetachedImgs() {
     for (const img of pendingImgs) {
         if (img.isConnected) continue;
@@ -71,17 +77,6 @@ function sweepDetachedImgs() {
 }
 
 function observeImg(img: HTMLImageElement) {
-    // once: a swept-then-readded img goes through observeImg again, and a
-    // second permanent listener would double-mount on a single dispatch.
-    img.addEventListener(
-        EVENT.ELEMENT_VISIBLE,
-        () => {
-            pendingImgs.delete(img);
-            mountOverlay(img);
-        },
-        { once: true },
-    );
-
     intersectionObserver.observe(img);
     pendingImgs.add(img);
     if (pendingImgs.size > SWEEP_THRESHOLD) sweepDetachedImgs();
@@ -187,7 +182,7 @@ function mountOverlay(img: HTMLImageElement) {
 const PREVIEW_SELECTOR = "ytd-video-preview";
 const PREVIEW_PLAYER_BOX = "#player-container-wrapper";
 const PREVIEW_LINK = "a#media-container-link";
-const watchedPreviews = new WeakSet<Element>();
+let watchedPreviews = new WeakSet<Element>();
 
 const previewObserver = new MutationObserver((mutations) => {
     const previews = new Set<HTMLElement>();
@@ -245,7 +240,17 @@ function findPreviews(element: HTMLElement): HTMLElement[] {
     return Array.from(element.querySelectorAll<HTMLElement>(PREVIEW_SELECTOR));
 }
 
-export default function start(): void {
+// ─── Lifecycle ───────────────────────────────────────────────────────
+//
+// start() and stop() are mirror images, driven by Settings.enabled. Both are
+// idempotent so the storage listener can call them freely.
+
+let running = false;
+
+export function start(): void {
+    if (running) return;
+    running = true;
+
     imgAddedObserver.observe(document.documentElement, {
         childList: true,
         subtree: true,
@@ -264,4 +269,41 @@ export default function start(): void {
             setImgTagProcessed(img);
             observeImg(img);
         });
+}
+
+/**
+ * Stop watching the page and leave it as if the extension had never touched
+ * it: no observers, no badge nodes, every <img> back under its own parent.
+ * A later start() then re-scans from scratch, which is cheap thanks to the
+ * background cache.
+ */
+export function stop(): void {
+    if (!running) return;
+    running = false;
+
+    imgAddedObserver.disconnect();
+    intersectionObserver.disconnect();
+    srcObserver.disconnect();
+    previewObserver.disconnect();
+    pendingImgs.clear();
+    watchedPreviews = new WeakSet();
+
+    closePopup();
+
+    document
+        .querySelectorAll<HTMLElement>(`.${CSS.PREVIEW_HOST}`)
+        .forEach((host) => host.remove());
+
+    // Unwrapping takes the badge container down with the wrapper.
+    document
+        .querySelectorAll<HTMLElement>(`.${CSS.THUMBNAIL_WRAPPER}`)
+        .forEach((wrapper) => {
+            const img = wrapper.querySelector(":scope > img");
+            if (img) wrapper.replaceWith(img);
+            else wrapper.remove();
+        });
+
+    document
+        .querySelectorAll<HTMLImageElement>(`img[${PROCESSED_ATTR}]`)
+        .forEach(removeImgTagProcessed);
 }

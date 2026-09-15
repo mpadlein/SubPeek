@@ -7,6 +7,10 @@ $font-stack: "Roboto", Arial, sans-serif;
 $color-primary: #3ea6ff;
 $color-favorite: #ff4757;
 $color-favorite-hover: #ff6b7a;
+// Same red as favorites so the palette stays small, but its own token so
+// "danger" (turn off) can diverge from "favorite" without touching hearts.
+$color-danger: $color-favorite;
+$bg-danger-hover: rgba(255, 71, 87, 0.12);
 $color-text: #fff;
 $color-text-muted: #aaa;
 $color-text-dark: #888;

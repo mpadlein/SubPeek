@@ -10,6 +10,27 @@ const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/lein.dev";
 const dropdownTemplate = createLanguageDropdown(() => renderApp());
 const favoritesTemplate = createFavoritedLanguages(() => renderApp());
 
+function enabledSwitchTemplate() {
+    const enabled = Settings.enabled.get();
+    const onChange = (e: Event) => {
+        Settings.enabled.set((e.target as HTMLInputElement).checked);
+    };
+
+    return html`
+        <label class="switch" title=${enabled ? "Turn off" : "Turn on"}>
+            <input
+                type="checkbox"
+                role="switch"
+                class="switch-input"
+                aria-label="Enable SubPeek"
+                .checked=${enabled}
+                @change=${onChange}
+            />
+            <span class="switch-track"></span>
+        </label>
+    `;
+}
+
 function headerTemplate() {
     return html`
         <header class="header">
@@ -20,6 +41,7 @@ function headerTemplate() {
                     >${browser.runtime.getManifest().version || ""}</span
                 >
             </div>
+            ${enabledSwitchTemplate()}
         </header>
     `;
 }
@@ -75,4 +97,5 @@ function renderApp() {
     await browserStorageLocalSV.ready();
     renderApp();
     Settings.langCodes.subscribe(renderApp);
+    Settings.enabled.subscribe(renderApp);
 })();

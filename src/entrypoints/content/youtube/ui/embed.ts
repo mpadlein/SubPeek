@@ -162,10 +162,13 @@ export async function initEmbed(
     } catch (e) {
         logger.error("initEmbed failed:", e);
         state = { kind: "unavailable" };
-    } finally {
-        updateView();
     }
 
+    // The container may have been torn down while the lookup was pending
+    // (stop(), or YouTube dropping the card); nothing to draw into then.
+    if (!container.isConnected) return;
+
+    updateView();
     container.addEventListener(EVENT.RENDER, updateView);
 }
 function handleUserLangCodesUpdate() {

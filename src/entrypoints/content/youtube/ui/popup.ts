@@ -9,6 +9,7 @@ import {
     ICON_AUDIO,
     ICON_CC,
     ICON_HEART,
+    ICON_POWER,
     ICON_SETTINGS,
 } from "../../constants";
 import { sortTrackByFavorite } from "../utils";
@@ -16,32 +17,53 @@ import { logoTemplate, svgIconTemplate } from "./utils";
 
 // ─── Templates ──────────────────────────────────────────────────────
 
+function openOptionsPage(e: Event): void {
+    e.preventDefault();
+    e.stopPropagation();
+    // runtime.openOptionsPage() is not exposed to content scripts - the
+    // background script opens it for us.
+    browser.runtime
+        .sendMessage({ event: EXTENSION_EVENTS.openOptionsPage })
+        .catch((error) => {
+            logger.error("Could not open options page:", error);
+        });
+}
+
+// This popup only exists while SubPeek is on, so the button can only ever
+// turn it off; the toolbar popup is the way back, which the tooltip says.
+// The storage listener tears this popup down along with everything else.
+const TURN_OFF_LABEL = "Turn off SubPeek (turn back on from the toolbar icon)";
+function turnOff(e: Event): void {
+    e.preventDefault();
+    e.stopPropagation();
+    Settings.enabled.set(false);
+}
+
 function headerTemplate(iconPath: string): TemplateResult {
     return html`
         <div class="${CSS.POPUP_HEADER}">
             <div class="${CSS.POPUP_LOGO}">${logoTemplate(18)}</div>
             <div class="${CSS.ICON}">${svgIconTemplate(iconPath)}</div>
-            <button
-                type="button"
-                class="${CSS.POPUP_HEADER_ACTION}"
-                title="Open extension options"
-                aria-label="Open extension options"
-                @click=${(e: Event) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    // runtime.openOptionsPage() is not exposed to content
-                    // scripts — the background script opens it for us.
-                    browser.runtime
-                        .sendMessage({
-                            event: EXTENSION_EVENTS.openOptionsPage,
-                        })
-                        .catch((error) => {
-                            logger.error("Could not open options page:", error);
-                        });
-                }}
-            >
-                ${svgIconTemplate(ICON_SETTINGS, 16)}
-            </button>
+            <div class="${CSS.POPUP_HEADER_ACTIONS}">
+                <button
+                    type="button"
+                    class="${CSS.POPUP_HEADER_ACTION} ${CSS.POPUP_HEADER_ACTION_DANGER}"
+                    title=${TURN_OFF_LABEL}
+                    aria-label=${TURN_OFF_LABEL}
+                    @click=${turnOff}
+                >
+                    ${svgIconTemplate(ICON_POWER, 16)}
+                </button>
+                <button
+                    type="button"
+                    class="${CSS.POPUP_HEADER_ACTION}"
+                    title="Open extension options"
+                    aria-label="Open extension options"
+                    @click=${openOptionsPage}
+                >
+                    ${svgIconTemplate(ICON_SETTINGS, 16)}
+                </button>
+            </div>
         </div>
     `;
 }
@@ -211,7 +233,7 @@ export function showTrackPopup(
 
 // ─── Global listeners to close popups ───────────────────────────────
 
-function closePopup(): void {
+export function closePopup(): void {
     document.querySelector(`.${CSS.POPUP}`)?.remove();
     activeSource = null;
 }

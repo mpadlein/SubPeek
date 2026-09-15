@@ -130,6 +130,69 @@ body {
     letter-spacing: 0.05em;
 }
 
+/* ===== On/off Switch ===== */
+/* The checkbox stays in the DOM (hidden, not display:none) so it keeps
+   keyboard focus and the role=switch semantics; the track is the visual. */
+.switch {
+    position: relative;
+    margin-left: auto;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.switch-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.switch-track {
+    position: relative;
+    display: block;
+    width: 36px;
+    height: 20px;
+    border-radius: var(--radius-full);
+    background: var(--bg-input-hover);
+    border: 1px solid var(--border-subtle);
+    transition:
+        background var(--transition-fast),
+        border-color var(--transition-fast);
+}
+
+.switch-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    transition:
+        transform var(--transition-fast),
+        background var(--transition-fast);
+}
+
+.switch:hover .switch-track {
+    border-color: var(--text-muted);
+}
+
+.switch-input:checked + .switch-track {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.switch-input:checked + .switch-track::after {
+    transform: translateX(16px);
+    background: #fff;
+}
+
+.switch-input:focus-visible + .switch-track {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
 /* ===== Settings Card ===== */
 .settings-card {
     background: var(--bg-card);
