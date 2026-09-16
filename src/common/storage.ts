@@ -54,10 +54,6 @@ class BrowserStorageSync {
         this.storage = new Map(Object.entries(data));
     }
 
-    public has(key: string): boolean {
-        return this.storage.has(key);
-    }
-
     public get<T>(key: string, default_value: T): T {
         if (!this.storage.has(key)) {
             return default_value;

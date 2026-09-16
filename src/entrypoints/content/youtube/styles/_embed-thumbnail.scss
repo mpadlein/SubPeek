@@ -27,7 +27,6 @@ $icon-opacity-active: 1;
     position: relative;
     container-type: inline-size;
     container-name: thumbnail;
-    // z-index: 1;
     isolation: isolate;
     height: 100%;
     width: 100%;
@@ -50,7 +49,6 @@ $icon-opacity-active: 1;
     position: absolute;
     width: fit-content;
     height: auto;
-    // margin: $spacing-sm;
     margin: 6px;
     pointer-events: none;
     z-index: 10;
@@ -128,28 +126,10 @@ $icon-opacity-active: 1;
 }
 
 // Corner positioning utilities
-.#{$prefix}-corner--top-left {
-    top: 0;
-    left: 0;
-    transform-origin: top left;
-}
-
-.#{$prefix}-corner--top-right {
-    top: 0;
-    right: 0;
-    transform-origin: top right;
-}
-
 .#{$prefix}-corner--bottom-left {
     bottom: 0;
     left: 0;
     transform-origin: bottom left;
-}
-
-.#{$prefix}-corner--bottom-right {
-    bottom: 0;
-    right: 0;
-    transform-origin: bottom right;
 }
 
 // Thumbnail badges
@@ -172,16 +152,10 @@ $icon-opacity-active: 1;
         font-family: $font-stack;
         color: $color-primary;
 
-        &--muted {
-            color: $color-text-dark;
-            background: rgba(136, 136, 136, 0.3);
-        }
-
         &--more {
             background: transparent;
             color: $color-text-muted;
             border-color: transparent;
-            // background: $bg-item;
         }
     }
 

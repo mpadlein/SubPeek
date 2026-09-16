@@ -85,14 +85,6 @@ export class IDBStore<T> {
         return this.run("readwrite", (s) => s.put(value)).then(() => {});
     }
 
-    clear(): Promise<void> {
-        return this.run("readwrite", (s) => s.clear()).then(() => {});
-    }
-
-    count(): Promise<number> {
-        return this.run("readonly", (s) => s.count());
-    }
-
     deleteByIndexRange(indexName: string, range: IDBKeyRange): Promise<void> {
         return this.open().then(
             (db) =>

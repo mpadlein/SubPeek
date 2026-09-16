@@ -100,41 +100,6 @@
         }
     }
 
-    // Favorites display in header
-    &__favorites {
-        display: flex;
-        align-items: center;
-        gap: $spacing-xs;
-        flex-wrap: wrap;
-    }
-
-    &__favorites-icon {
-        display: flex;
-        align-items: center;
-        color: $color-favorite;
-
-        svg {
-            width: 14px;
-            height: 14px;
-        }
-    }
-
-    &__favorites-badge {
-        font-size: 11px;
-        font-weight: 600;
-        color: $color-text;
-        background: $color-favorite;
-        padding: 2px 6px;
-        border-radius: $radius-sm;
-        white-space: nowrap;
-    }
-
-    &__favorites-none {
-        font-size: 12px;
-        color: $color-text-muted;
-        font-style: italic;
-    }
-
     // Scrollable list
     &__list {
         max-height: 240px;

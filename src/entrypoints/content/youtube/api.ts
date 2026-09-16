@@ -176,7 +176,6 @@ function parseVideoResponse(playerResp: PlayerResponse): VideoInfo {
                 languageCode: track.languageCode,
                 name: track.name?.simpleText,
                 auto: track.kind === "asr",
-                url: track.baseUrl,
             }),
         ) || [];
 

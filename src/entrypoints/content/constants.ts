@@ -34,7 +34,6 @@ export const CSS = {
     BADGES: `${CSS_PREFIX}-badges`,
     ICON: `${CSS_PREFIX}-icon`,
     ICON_ACTIVE: `${CSS_PREFIX}-icon--active`,
-    ICON_IDLE: `${CSS_PREFIX}-icon--idle`,
 
     // Popup
     POPUP: `${CSS_PREFIX}-popup`,
@@ -55,9 +54,7 @@ export const CSS = {
     MOD_BOTTOM: "is-bottom",
 
     // Loading
-    LOADING: `${CSS_PREFIX}-loading`,
     LOADING_SPINNER: `${CSS_PREFIX}-loading__spinner`,
-    LOADING_TEXT: `${CSS_PREFIX}-loading__text`,
 
     // Tooltip
     TOOLTIP: `${CSS_PREFIX}-tooltip`,

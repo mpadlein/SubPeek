@@ -4,7 +4,6 @@ export interface LanguageItem {
     nativeName: string;
 
     isRecommended: boolean;
-    recommendIndex: number;
 
     isPopular: boolean;
     popularIndex: number;

@@ -2,7 +2,6 @@ export interface CaptionTrack {
     languageCode: string;
     name: string;
     auto: boolean;
-    url: string;
 }
 
 /** Audio track info */

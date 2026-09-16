@@ -47,7 +47,6 @@ function getLanguageList(): LanguageItem[] {
         name,
         nativeName: ISO6391.getNativeName(code),
         isRecommended: recommendedCodes.has(code),
-        recommendIndex: 0,
         isPopular: POPULAR_LANGUAGES.includes(code),
         popularIndex: POPULAR_LANGUAGES.indexOf(code),
         isFavorited: Settings.langCodes.get().includes(code),

@@ -39,13 +39,3 @@
         transform: rotate(360deg);
     }
 }
-
-@keyframes #{$prefix}-pulse {
-    0%,
-    100% {
-        opacity: 0.4;
-    }
-    50% {
-        opacity: 1;
-    }
-}
