@@ -11,6 +11,9 @@ export default defineConfig({
             "https://www.youtube.com/*",
             "https://youtube.com/*",
         ],
+        // Floor set by `@container` queries in the content-script CSS
+        // (Chrome 105 / Firefox 110); AbortSignal.timeout needs 103 / 100.
+        // Keep in sync with `vite.build.target` below.
         minimum_chrome_version: "105",
         // The settings UI doubles as the options page so the gear button in the
         // in-page track popup has something to open.
@@ -24,12 +27,18 @@ export default defineConfig({
             browser_specific_settings: {
                 gecko: {
                     id: "subpeek@mpadlein",
+                    strict_min_version: "110.0",
                     data_collection_permissions: { required: ["none"] },
                 },
             },
         }),
     }),
     srcDir: "src",
+    // Transpile to the same browsers the manifest admits, instead of Vite's
+    // default "baseline-widely-available" (chrome111 / firefox114).
+    vite: () => ({
+        build: { target: ["chrome105", "firefox110"] },
+    }),
     zip: {
         // Keep local-only and non-build files out of the AMO sources zip.
         excludeSources: [
