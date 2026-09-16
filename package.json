@@ -2,7 +2,7 @@
     "name": "subpeek",
     "description": "SubPeek - Caption & Dub Labels for YouTube",
     "private": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "license": "GPL-3.0-only",
     "type": "module",
     "scripts": {
