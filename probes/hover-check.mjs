@@ -11,7 +11,8 @@ import path from "node:path";
 
 const EDGE = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
 const EXT = path.resolve(".output/chrome-mv3");
-const URL_ = process.argv[2] || "https://www.youtube.com/results?search_query=mrbeast";
+const URL_ =
+    process.argv[2] || "https://www.youtube.com/results?search_query=mrbeast";
 const PORT = 9338;
 const PROFILE = path.resolve(".temp/hover-check-profile");
 fs.rmSync(PROFILE, { recursive: true, force: true });
@@ -28,7 +29,9 @@ class CDP {
             const p = this.pending.get(m.id);
             this.pending.delete(m.id);
             if (!p) return;
-            m.error ? p.reject(new Error(m.error.message)) : p.resolve(m.result);
+            m.error
+                ? p.reject(new Error(m.error.message))
+                : p.resolve(m.result);
         };
     }
     send(method, params = {}, sessionId) {
@@ -42,7 +45,9 @@ class CDP {
 async function connect() {
     for (let i = 0; i < 60; i++) {
         try {
-            const info = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+            const info = await (
+                await fetch(`http://127.0.0.1:${PORT}/json/version`)
+            ).json();
             const ws = new WebSocket(info.webSocketDebuggerUrl);
             await new Promise((res, rej) => {
                 ws.onopen = res;
@@ -78,7 +83,9 @@ const edge = spawn(
 const results = [];
 const check = (name, ok, detail = "") => {
     results.push(ok);
-    console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`);
+    console.log(
+        `${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`,
+    );
 };
 
 try {
@@ -89,18 +96,35 @@ try {
         pageTarget = targetInfos.find((t) => t.type === "page")?.targetId;
         if (!pageTarget) await sleep(300);
     }
-    const { sessionId } = await cdp.send("Target.attachToTarget", { targetId: pageTarget, flatten: true });
+    const { sessionId } = await cdp.send("Target.attachToTarget", {
+        targetId: pageTarget,
+        flatten: true,
+    });
     const send = (m, p) => cdp.send(m, p, sessionId);
     const evaluate = async (expression) => {
-        const r = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+        const r = await send("Runtime.evaluate", {
+            expression,
+            awaitPromise: true,
+            returnByValue: true,
+        });
         if (r.exceptionDetails) {
-            throw new Error(r.exceptionDetails.text + " " + (r.exceptionDetails.exception?.description || ""));
+            throw new Error(
+                r.exceptionDetails.text +
+                    " " +
+                    (r.exceptionDetails.exception?.description || ""),
+            );
         }
         return r.result.value;
     };
-    const mouse = (type, x, y, extra = {}) => send("Input.dispatchMouseEvent", { type, x, y, ...extra });
+    const mouse = (type, x, y, extra = {}) =>
+        send("Input.dispatchMouseEvent", { type, x, y, ...extra });
     await send("Page.enable");
-    await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 1400, deviceScaleFactor: 1, mobile: false });
+    await send("Emulation.setDeviceMetricsOverride", {
+        width: 1280,
+        height: 1400,
+        deviceScaleFactor: 1,
+        mobile: false,
+    });
 
     console.log("url:", URL_);
     await send("Page.navigate", { url: URL_ });
@@ -145,9 +169,19 @@ try {
                  clickPt: r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null,
                  hitIsBadge: !!(hit && hit.closest('.ytbext-item')) };
     })()`);
-    console.log("preview active:", state.previewActive, "| mirrored badge:", state.mirroredBadge, "| badge under pointer:", state.hitIsBadge);
+    console.log(
+        "preview active:",
+        state.previewActive,
+        "| mirrored badge:",
+        state.mirroredBadge,
+        "| badge under pointer:",
+        state.hitIsBadge,
+    );
     if (state.previewActive) {
-        check("badge is what the pointer hits while the preview plays", state.hitIsBadge);
+        check(
+            "badge is what the pointer hits while the preview plays",
+            state.hitIsBadge,
+        );
     }
 
     const pt = state.clickPt || card.badgePt;
@@ -157,12 +191,28 @@ try {
     await sleep(50);
     await mouse("mouseReleased", pt.x, pt.y, { button: "left", clickCount: 1 });
     await sleep(1200);
-    const afterClick = await evaluate(`({ url: location.href, popup: !!document.querySelector('.ytbext-popup') })`);
+    const afterClick = await evaluate(
+        `({ url: location.href, popup: !!document.querySelector('.ytbext-popup') })`,
+    );
     check("badge click opens the track popup", afterClick.popup);
-    check("badge click does not navigate", afterClick.url === card.url, afterClick.url.slice(0, 60));
+    check(
+        "badge click does not navigate",
+        afterClick.url === card.url,
+        afterClick.url.slice(0, 60),
+    );
 
-    await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
-    await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await send("Input.dispatchKeyEvent", {
+        type: "keyDown",
+        key: "Escape",
+        code: "Escape",
+        windowsVirtualKeyCode: 27,
+    });
+    await send("Input.dispatchKeyEvent", {
+        type: "keyUp",
+        key: "Escape",
+        code: "Escape",
+        windowsVirtualKeyCode: 27,
+    });
     // Park the pointer on the left guide rail, which never holds a card; a
     // fixed point further right can land on another video and legitimately
     // keep the preview active for that one.
@@ -182,9 +232,14 @@ try {
         check(
             "preview deactivates after the pointer leaves",
             !afterLeave.active,
-            afterLeave.active ? `still active for ${afterLeave.activeHref}, pointer over card: ${afterLeave.pointerOverCard}` : "",
+            afterLeave.active
+                ? `still active for ${afterLeave.activeHref}, pointer over card: ${afterLeave.pointerOverCard}`
+                : "",
         );
-        check("no badge left inside the inactive preview", !afterLeave.leftover);
+        check(
+            "no badge left inside the inactive preview",
+            !afterLeave.leftover,
+        );
     }
 } catch (e) {
     if (process.exitCode !== 2) {
@@ -192,9 +247,18 @@ try {
         process.exitCode = 1;
     }
 } finally {
-    if (process.exitCode === undefined) process.exitCode = results.every(Boolean) ? 0 : 1;
-    console.log(process.exitCode === 0 ? "RESULT: PASS" : process.exitCode === 2 ? "RESULT: SKIP" : "RESULT: FAIL");
+    if (process.exitCode === undefined)
+        process.exitCode = results.every(Boolean) ? 0 : 1;
+    console.log(
+        process.exitCode === 0
+            ? "RESULT: PASS"
+            : process.exitCode === 2
+              ? "RESULT: SKIP"
+              : "RESULT: FAIL",
+    );
     edge.kill();
     await sleep(300);
-    spawn("taskkill", ["/F", "/T", "/PID", String(edge.pid)], { stdio: "ignore" });
+    spawn("taskkill", ["/F", "/T", "/PID", String(edge.pid)], {
+        stdio: "ignore",
+    });
 }

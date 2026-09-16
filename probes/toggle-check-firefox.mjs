@@ -22,7 +22,8 @@ import path from "node:path";
 
 const FIREFOX = "C:/Program Files/Mozilla Firefox/firefox.exe";
 const EXT = path.resolve(".output/firefox-mv2");
-const URL_ = process.argv[2] || "https://www.youtube.com/results?search_query=mrbeast";
+const URL_ =
+    process.argv[2] || "https://www.youtube.com/results?search_query=mrbeast";
 const PORT = 9449;
 const PROFILE = path.resolve(".temp/toggle-check-firefox-profile");
 fs.rmSync(PROFILE, { recursive: true, force: true });
@@ -55,7 +56,9 @@ class BiDi {
             const p = this.pending.get(m.id);
             this.pending.delete(m.id);
             if (!p) return;
-            m.type === "error" ? p.reject(new Error(`${m.error}: ${m.message}`)) : p.resolve(m.result);
+            m.type === "error"
+                ? p.reject(new Error(`${m.error}: ${m.message}`))
+                : p.resolve(m.result);
         };
     }
     send(method, params = {}) {
@@ -87,14 +90,25 @@ async function connect() {
 
 const ff = spawn(
     FIREFOX,
-    ["-headless", "--remote-debugging-port", String(PORT), "-profile", PROFILE, "-no-remote", "-new-instance", "about:blank"],
+    [
+        "-headless",
+        "--remote-debugging-port",
+        String(PORT),
+        "-profile",
+        PROFILE,
+        "-no-remote",
+        "-new-instance",
+        "about:blank",
+    ],
     { stdio: "ignore" },
 );
 
 const results = [];
 const check = (name, ok, detail = "") => {
     results.push(ok);
-    console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`);
+    console.log(
+        `${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`,
+    );
 };
 
 // Everything the content script leaves in the page, in one snapshot.
@@ -119,7 +133,9 @@ try {
         if (text.includes("[SubPeek]")) console.log(`  ${text.slice(0, 200)}`);
     });
 
-    await bidi.send("webExtension.install", { extensionData: { type: "path", path: EXT } });
+    await bidi.send("webExtension.install", {
+        extensionData: { type: "path", path: EXT },
+    });
 
     const { contexts } = await bidi.send("browsingContext.getTree");
     const context = contexts[0].context;
@@ -130,7 +146,10 @@ try {
             awaitPromise: true,
             resultOwnership: "none",
         });
-        if (r.type === "exception") throw new Error("evaluate: " + (r.exceptionDetails?.text || JSON.stringify(r)));
+        if (r.type === "exception")
+            throw new Error(
+                "evaluate: " + (r.exceptionDetails?.text || JSON.stringify(r)),
+            );
         return r.result?.value;
     };
     const snapshot = async () => JSON.parse(await evaluate(DOM_SNAPSHOT));
@@ -143,7 +162,11 @@ try {
                     id: "mouse",
                     parameters: { pointerType: "mouse" },
                     actions: [
-                        { type: "pointerMove", x: Math.round(x), y: Math.round(y) },
+                        {
+                            type: "pointerMove",
+                            x: Math.round(x),
+                            y: Math.round(y),
+                        },
                         { type: "pause", duration: 50 },
                         { type: "pointerDown", button: 0 },
                         { type: "pointerUp", button: 0 },
@@ -153,7 +176,11 @@ try {
         });
 
     console.log("url:", URL_);
-    await bidi.send("browsingContext.navigate", { context, url: URL_, wait: "complete" });
+    await bidi.send("browsingContext.navigate", {
+        context,
+        url: URL_,
+        wait: "complete",
+    });
 
     // Headless Firefox only mounts the first couple of cards; that is enough.
     const t0 = Date.now();
@@ -167,7 +194,10 @@ try {
         await sleep(500);
     }
     if (!ready) {
-        console.log("SKIP  no badges rendered", JSON.stringify(await snapshot()));
+        console.log(
+            "SKIP  no badges rendered",
+            JSON.stringify(await snapshot()),
+        );
         process.exitCode = 2;
         throw new Error("no badges");
     }
@@ -193,7 +223,11 @@ try {
                      pt: r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null });
         })()`),
     );
-    check("track popup opens with a power button", popupState.open && !!popupState.pt, popupState.title || "");
+    check(
+        "track popup opens with a power button",
+        popupState.open && !!popupState.pt,
+        popupState.title || "",
+    );
     if (!popupState.pt) throw new Error("no power button");
     await click(popupState.pt.x, popupState.pt.y);
 
@@ -208,8 +242,16 @@ try {
     }
     console.log("off:", JSON.stringify(off), `after ${Date.now() - t1} ms`);
     check("off: in-page popup closed", !off.popup);
-    check("off: no extension nodes left in the page", off.anyNode === 0 && off.processed === 0, `anyNode=${off.anyNode} processed=${off.processed}`);
-    check("off: thumbnails still present", off.thumbImgs >= before.wrappers, `${off.thumbImgs} imgs`);
+    check(
+        "off: no extension nodes left in the page",
+        off.anyNode === 0 && off.processed === 0,
+        `anyNode=${off.anyNode} processed=${off.processed}`,
+    );
+    check(
+        "off: thumbnails still present",
+        off.thumbImgs >= before.wrappers,
+        `${off.thumbImgs} imgs`,
+    );
 
     // Scroll to make YouTube load more cards; nothing of ours may react.
     for (let i = 0; i < 3; i++) {
@@ -218,16 +260,29 @@ try {
     }
     await sleep(2000);
     const offAfterScroll = await snapshot();
-    check("off: still no extension nodes after scrolling", offAfterScroll.anyNode === 0 && offAfterScroll.processed === 0, `anyNode=${offAfterScroll.anyNode} wrappers=${offAfterScroll.wrappers}`);
+    check(
+        "off: still no extension nodes after scrolling",
+        offAfterScroll.anyNode === 0 && offAfterScroll.processed === 0,
+        `anyNode=${offAfterScroll.anyNode} wrappers=${offAfterScroll.wrappers}`,
+    );
 } catch (e) {
     if (process.exitCode !== 2) {
         console.error("ERROR", e.message);
         process.exitCode = 1;
     }
 } finally {
-    if (process.exitCode === undefined) process.exitCode = results.every(Boolean) ? 0 : 1;
-    console.log(process.exitCode === 0 ? "RESULT: PASS" : process.exitCode === 2 ? "RESULT: SKIP" : "RESULT: FAIL");
+    if (process.exitCode === undefined)
+        process.exitCode = results.every(Boolean) ? 0 : 1;
+    console.log(
+        process.exitCode === 0
+            ? "RESULT: PASS"
+            : process.exitCode === 2
+              ? "RESULT: SKIP"
+              : "RESULT: FAIL",
+    );
     ff.kill();
     await sleep(300);
-    spawn("taskkill", ["/F", "/T", "/PID", String(ff.pid)], { stdio: "ignore" });
+    spawn("taskkill", ["/F", "/T", "/PID", String(ff.pid)], {
+        stdio: "ignore",
+    });
 }

@@ -1,0 +1,245 @@
+import type { CacheEntry } from "@/common/types";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fakeBrowser } from "wxt/testing/fake-browser";
+
+// The page's ytcfg is read from inline scripts; hand the InnerTube route a
+// fixed context instead so the tests can focus on the fetch and parse logic.
+vi.mock("@/entrypoints/content/youtube/ytcfg", async (importOriginal) => ({
+    ...(await importOriginal<
+        typeof import("@/entrypoints/content/youtube/ytcfg")
+    >()),
+    getYtcfg: () => ({
+        context: { client: { clientVersion: "2.20260901", visitorData: "v" } },
+        clientName: 1,
+        sts: 20260,
+        loggedIn: false,
+    }),
+}));
+
+const cache = {
+    getCachedVideoInfo: vi.fn<() => Promise<CacheEntry | null>>(),
+    saveVideoInfo: vi.fn<() => Promise<void>>(),
+};
+vi.mock("@/common/messaging", () => ({ messaging: cache }));
+
+const fetchMock = vi.fn<typeof fetch>();
+vi.stubGlobal("fetch", fetchMock);
+
+// api.ts keeps the rate-limit backoff and the in-flight map in module state.
+async function loadApi() {
+    vi.resetModules();
+    const { resolveVideoInfo } =
+        await import("@/entrypoints/content/youtube/api");
+    const { Settings } = await import("@/common/settings");
+    return { resolveVideoInfo, Settings };
+}
+
+const WATCH_URL = "https://www.youtube.com/watch?v=abc123";
+
+function playerResponse(description = "plain", status = "OK") {
+    return {
+        playabilityStatus: { status },
+        videoDetails: { videoId: "abc123", shortDescription: description },
+        captions: {
+            playerCaptionsTracklistRenderer: {
+                captionTracks: [
+                    { languageCode: "en", name: { simpleText: "English" } },
+                    {
+                        languageCode: "es",
+                        name: { simpleText: "Spanish (auto)" },
+                        kind: "asr",
+                    },
+                ],
+            },
+        },
+        streamingData: {
+            adaptiveFormats: [
+                {
+                    itag: 140,
+                    audioTrack: { id: "en.4", displayName: "English original" },
+                },
+                {
+                    itag: 140,
+                    audioTrack: { id: "es-US.3", displayName: "Spanish" },
+                },
+                // Same language, lower bitrate: must be de-duplicated.
+                {
+                    itag: 139,
+                    audioTrack: { id: "es-US.3", displayName: "Spanish" },
+                },
+                { itag: 137 },
+            ],
+        },
+    };
+}
+
+const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+    });
+const html = (body: string, status = 200) =>
+    new Response(body, { status, headers: { "content-type": "text/html" } });
+const watchPage = (resp: unknown) =>
+    `<!DOCTYPE html><html><head><script>var ytInitialPlayerResponse = ${JSON.stringify(resp)};var ytInitialData = {"a":{}};</script></head><body>x</body></html>`;
+
+const expectedTracks = {
+    captions: [
+        { languageCode: "en", name: "English", auto: false },
+        { languageCode: "es", name: "Spanish (auto)", auto: true },
+    ],
+    audioTracks: [
+        { languageCode: "en", name: "English original", origin: true },
+        { languageCode: "es-US", name: "Spanish", origin: false },
+    ],
+};
+
+beforeEach(() => {
+    fakeBrowser.reset();
+    fetchMock.mockReset();
+    cache.getCachedVideoInfo.mockReset().mockResolvedValue(null);
+    cache.saveVideoInfo.mockReset().mockResolvedValue(undefined);
+});
+
+describe("resolveVideoInfo over InnerTube", () => {
+    it("posts to the absolute player endpoint and parses the tracks", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        fetchMock.mockResolvedValueOnce(json(playerResponse()));
+
+        const info = await resolveVideoInfo(WATCH_URL);
+
+        expect(info).toEqual(expectedTracks);
+        const [url, init] = fetchMock.mock.calls[0]!;
+        expect(url).toBe(
+            "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
+        );
+        expect(init?.method).toBe("POST");
+        expect(JSON.parse(String(init?.body))).toMatchObject({
+            videoId: "abc123",
+            context: { client: { clientVersion: "2.20260901" } },
+        });
+        expect(cache.saveVideoInfo).toHaveBeenCalledWith(
+            "abc123",
+            expectedTracks,
+        );
+    });
+
+    it("treats a non-OK playability status as unavailable, not as zero tracks", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        fetchMock.mockResolvedValueOnce(
+            json(playerResponse("x", "LOGIN_REQUIRED")),
+        );
+
+        expect(await resolveVideoInfo(WATCH_URL)).toBeNull();
+        expect(cache.saveVideoInfo).not.toHaveBeenCalled();
+    });
+
+    it("shares one request between concurrent lookups of the same video", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        fetchMock.mockResolvedValueOnce(json(playerResponse()));
+
+        const [a, b] = await Promise.all([
+            resolveVideoInfo(WATCH_URL),
+            resolveVideoInfo(WATCH_URL + "&t=5s"),
+        ]);
+
+        expect(a).toEqual(expectedTracks);
+        expect(b).toBe(a);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("backs off after a 429 instead of retrying", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        fetchMock.mockResolvedValueOnce(json({}, 429));
+
+        expect(await resolveVideoInfo(WATCH_URL)).toBeNull();
+        expect(
+            await resolveVideoInfo("https://www.youtube.com/watch?v=other"),
+        ).toBeNull();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("resolveVideoInfo watch-page fallback", () => {
+    // InnerTube fails first, then the watch page is served.
+    function serveWatchPage(page: string) {
+        fetchMock
+            .mockResolvedValueOnce(json({ error: "boom" }, 500))
+            .mockResolvedValueOnce(html(page));
+    }
+
+    it("extracts ytInitialPlayerResponse when the description contains };", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        serveWatchPage(
+            watchPage(playerResponse("const cfg = { a: 1 };\nrun(cfg);")),
+        );
+
+        expect(await resolveVideoInfo(WATCH_URL)).toEqual(expectedTracks);
+        expect(fetchMock.mock.calls[1]![0]).toBe(WATCH_URL);
+    });
+
+    it("copes with an escaped quote before };", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        serveWatchPage(watchPage(playerResponse('say "hi" }; then stop')));
+
+        expect(await resolveVideoInfo(WATCH_URL)).toEqual(expectedTracks);
+    });
+
+    it("resolves to null when the page has no player response", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        serveWatchPage("<!DOCTYPE html><html><body>nothing</body></html>");
+
+        expect(await resolveVideoInfo(WATCH_URL)).toBeNull();
+    });
+
+    it("resolves to null when the page is cut off inside the object", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        serveWatchPage(watchPage(playerResponse("cut")).slice(0, 120));
+
+        expect(await resolveVideoInfo(WATCH_URL)).toBeNull();
+    });
+});
+
+describe("resolveVideoInfo short-circuits", () => {
+    it("serves a fresh cache entry without fetching", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        cache.getCachedVideoInfo.mockResolvedValue({
+            videoId: "abc123",
+            data: expectedTracks,
+            timestamp: Date.now() / 1000 - 60,
+        });
+
+        expect(await resolveVideoInfo(WATCH_URL)).toEqual(expectedTracks);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("ignores an expired cache entry and fetches again", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        cache.getCachedVideoInfo.mockResolvedValue({
+            videoId: "abc123",
+            data: expectedTracks,
+            timestamp: Date.now() / 1000 - 3 * 60 * 60,
+        });
+        fetchMock.mockResolvedValueOnce(json(playerResponse()));
+
+        expect(await resolveVideoInfo(WATCH_URL)).toEqual(expectedTracks);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not fetch while the extension is turned off", async () => {
+        const { resolveVideoInfo, Settings } = await loadApi();
+        Settings.enabled.set(false);
+
+        expect(await resolveVideoInfo(WATCH_URL)).toBeNull();
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("resolves to null for a URL without a video id", async () => {
+        const { resolveVideoInfo } = await loadApi();
+
+        expect(
+            await resolveVideoInfo("https://www.youtube.com/watch?list=PL1"),
+        ).toBeNull();
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+});

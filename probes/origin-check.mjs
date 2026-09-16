@@ -20,9 +20,24 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // videoId -> what the audio popup must and must not list once the original is hidden
 const CASES = [
-    { id: "KKj9ZeZBe88", label: "Spanish original (Fede Vigevani)", original: "es-US", dub: "en-US" },
-    { id: "lbLj5Yb6SAE", label: "French original (Squeezie)", original: "fr-FR", dub: "en-US" },
-    { id: "gTKS8SAwUzE", label: "English original (MrBeast, control)", original: "en", dub: "es" },
+    {
+        id: "KKj9ZeZBe88",
+        label: "Spanish original (Fede Vigevani)",
+        original: "es-US",
+        dub: "en-US",
+    },
+    {
+        id: "lbLj5Yb6SAE",
+        label: "French original (Squeezie)",
+        original: "fr-FR",
+        dub: "en-US",
+    },
+    {
+        id: "gTKS8SAwUzE",
+        label: "English original (MrBeast, control)",
+        original: "en",
+        dub: "es",
+    },
 ];
 
 class CDP {
@@ -36,7 +51,10 @@ class CDP {
             if (!m.id) return this.onEvent(m);
             const p = this.pending.get(m.id);
             this.pending.delete(m.id);
-            if (p) m.error ? p.reject(new Error(m.error.message)) : p.resolve(m.result);
+            if (p)
+                m.error
+                    ? p.reject(new Error(m.error.message))
+                    : p.resolve(m.result);
         };
     }
     send(method, params = {}, sessionId) {
@@ -50,7 +68,9 @@ class CDP {
 async function connect() {
     for (let i = 0; i < 60; i++) {
         try {
-            const info = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+            const info = await (
+                await fetch(`http://127.0.0.1:${PORT}/json/version`)
+            ).json();
             const ws = new WebSocket(info.webSocketDebuggerUrl);
             await new Promise((res, rej) => {
                 ws.onopen = res;
@@ -85,7 +105,9 @@ const edge = spawn(
 const results = [];
 const check = (name, ok, detail = "") => {
     results.push(ok);
-    console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`);
+    console.log(
+        `${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`,
+    );
 };
 
 try {
@@ -96,30 +118,54 @@ try {
         pageTarget = targetInfos.find((t) => t.type === "page")?.targetId;
         if (!pageTarget) await sleep(300);
     }
-    const { sessionId } = await cdp.send("Target.attachToTarget", { targetId: pageTarget, flatten: true });
+    const { sessionId } = await cdp.send("Target.attachToTarget", {
+        targetId: pageTarget,
+        flatten: true,
+    });
     const send = (m, p) => cdp.send(m, p, sessionId);
     const evaluate = async (expression) => {
-        const r = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+        const r = await send("Runtime.evaluate", {
+            expression,
+            awaitPromise: true,
+            returnByValue: true,
+        });
         if (r.exceptionDetails) {
-            throw new Error(r.exceptionDetails.text + " " + (r.exceptionDetails.exception?.description || ""));
+            throw new Error(
+                r.exceptionDetails.text +
+                    " " +
+                    (r.exceptionDetails.exception?.description || ""),
+            );
         }
         return r.result.value;
     };
     const logs = [];
     cdp.onEvent = (m) => {
         if (m.method !== "Runtime.consoleAPICalled") return;
-        const text = m.params.args.map((a) => a.value ?? a.description ?? "").join(" ");
-        if (text.includes("[SubPeek]") && /error|not found|fallback|rate limited/i.test(text)) logs.push(text);
+        const text = m.params.args
+            .map((a) => a.value ?? a.description ?? "")
+            .join(" ");
+        if (
+            text.includes("[SubPeek]") &&
+            /error|not found|fallback|rate limited/i.test(text)
+        )
+            logs.push(text);
     };
     await send("Runtime.enable");
     await send("Page.enable");
-    await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 1400, deviceScaleFactor: 1, mobile: false });
+    await send("Emulation.setDeviceMetricsOverride", {
+        width: 1280,
+        height: 1400,
+        deviceScaleFactor: 1,
+        mobile: false,
+    });
 
     await send("Page.navigate", { url: PAGE });
     // Wait for the content script to be live (real badges present), then inject our cards.
     let live = false;
     for (const start = Date.now(); Date.now() - start < 60000 && !live; ) {
-        live = await evaluate(`document.querySelectorAll('.ytbext-embed-container').length > 0`);
+        live = await evaluate(
+            `document.querySelectorAll('.ytbext-embed-container').length > 0`,
+        );
         if (!live) await sleep(500);
     }
     if (!live) {
@@ -128,7 +174,8 @@ try {
         throw new Error("not live");
     }
 
-    const GIF = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    const GIF =
+        "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
     await evaluate(`(() => {
         ${JSON.stringify(CASES)}.forEach((c, i) => {
             const a = document.createElement('a');
@@ -175,19 +222,38 @@ try {
         })()`);
         await evaluate(`document.querySelector('.ytbext-popup')?.remove()`);
         const detail = `audio popup lists: ${listed.length ? listed.join(", ") : "(nothing)"}`;
-        check(`${c.label}: original ${c.original} hidden from dub list`, !listed.includes(c.original), detail);
-        check(`${c.label}: dub ${c.dub} kept in dub list`, listed.includes(c.dub));
+        check(
+            `${c.label}: original ${c.original} hidden from dub list`,
+            !listed.includes(c.original),
+            detail,
+        );
+        check(
+            `${c.label}: dub ${c.dub} kept in dub list`,
+            listed.includes(c.dub),
+        );
     }
-    if (logs.length) console.log("SubPeek problem lines:\n  " + [...new Set(logs)].join("\n  "));
+    if (logs.length)
+        console.log(
+            "SubPeek problem lines:\n  " + [...new Set(logs)].join("\n  "),
+        );
 } catch (e) {
     if (process.exitCode !== 2) {
         console.error("ERROR", e.message);
         process.exitCode = 1;
     }
 } finally {
-    if (process.exitCode === undefined) process.exitCode = results.every(Boolean) ? 0 : 1;
-    console.log(process.exitCode === 0 ? "RESULT: PASS" : process.exitCode === 2 ? "RESULT: SKIP" : "RESULT: FAIL");
+    if (process.exitCode === undefined)
+        process.exitCode = results.every(Boolean) ? 0 : 1;
+    console.log(
+        process.exitCode === 0
+            ? "RESULT: PASS"
+            : process.exitCode === 2
+              ? "RESULT: SKIP"
+              : "RESULT: FAIL",
+    );
     edge.kill();
     await sleep(300);
-    spawn("taskkill", ["/F", "/T", "/PID", String(edge.pid)], { stdio: "ignore" });
+    spawn("taskkill", ["/F", "/T", "/PID", String(edge.pid)], {
+        stdio: "ignore",
+    });
 }

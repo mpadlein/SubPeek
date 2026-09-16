@@ -31,7 +31,9 @@ class CDP {
             const p = this.pending.get(m.id);
             this.pending.delete(m.id);
             if (!p) return;
-            m.error ? p.reject(new Error(m.error.message)) : p.resolve(m.result);
+            m.error
+                ? p.reject(new Error(m.error.message))
+                : p.resolve(m.result);
         };
     }
     send(method, params = {}, sessionId) {
@@ -45,7 +47,9 @@ class CDP {
 async function connect() {
     for (let i = 0; i < 60; i++) {
         try {
-            const info = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+            const info = await (
+                await fetch(`http://127.0.0.1:${PORT}/json/version`)
+            ).json();
             const ws = new WebSocket(info.webSocketDebuggerUrl);
             await new Promise((res, rej) => {
                 ws.onopen = res;
@@ -80,7 +84,9 @@ const edge = spawn(
 const results = [];
 const check = (name, ok, detail = "") => {
     results.push(ok);
-    console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`);
+    console.log(
+        `${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`,
+    );
 };
 
 // Everything the check needs about the search UI, in one snapshot.
@@ -118,7 +124,11 @@ try {
     let bg = null;
     for (let i = 0; i < 40 && !bg; i++) {
         const { targetInfos } = await cdp.send("Target.getTargets");
-        bg = targetInfos.find((t) => t.url.startsWith("chrome-extension://") && t.url.endsWith("/background.js"));
+        bg = targetInfos.find(
+            (t) =>
+                t.url.startsWith("chrome-extension://") &&
+                t.url.endsWith("/background.js"),
+        );
         if (!bg) await sleep(300);
     }
     if (!bg) throw new Error("extension background target not found");
@@ -126,19 +136,35 @@ try {
 
     const { targetInfos } = await cdp.send("Target.getTargets");
     const pageTarget = targetInfos.find((t) => t.type === "page")?.targetId;
-    const { sessionId } = await cdp.send("Target.attachToTarget", { targetId: pageTarget, flatten: true });
+    const { sessionId } = await cdp.send("Target.attachToTarget", {
+        targetId: pageTarget,
+        flatten: true,
+    });
     const send = (m, p) => cdp.send(m, p, sessionId);
     const evaluate = async (expression) => {
-        const r = await send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+        const r = await send("Runtime.evaluate", {
+            expression,
+            awaitPromise: true,
+            returnByValue: true,
+        });
         if (r.exceptionDetails) {
-            throw new Error(r.exceptionDetails.text + " " + (r.exceptionDetails.exception?.description || ""));
+            throw new Error(
+                r.exceptionDetails.text +
+                    " " +
+                    (r.exceptionDetails.exception?.description || ""),
+            );
         }
         return r.result.value;
     };
     const press = async (key) => {
         const k = KEYS[key];
         await send("Input.dispatchKeyEvent", { type: "keyDown", key, ...k });
-        await send("Input.dispatchKeyEvent", { type: "keyUp", key, code: k.code, windowsVirtualKeyCode: k.windowsVirtualKeyCode });
+        await send("Input.dispatchKeyEvent", {
+            type: "keyUp",
+            key,
+            code: k.code,
+            windowsVirtualKeyCode: k.windowsVirtualKeyCode,
+        });
         await sleep(80);
     };
     const type = async (text) => {
@@ -147,13 +173,22 @@ try {
     };
     const snap = () => evaluate(SNAPSHOT);
     const shot = async (name) => {
-        const { data } = await send("Page.captureScreenshot", { format: "png" });
+        const { data } = await send("Page.captureScreenshot", {
+            format: "png",
+        });
         fs.writeFileSync(path.join(SHOTS, name), Buffer.from(data, "base64"));
     };
 
     await send("Page.enable");
-    await send("Emulation.setDeviceMetricsOverride", { width: 340, height: 900, deviceScaleFactor: 2, mobile: false });
-    await send("Page.navigate", { url: `chrome-extension://${extId}/popup.html` });
+    await send("Emulation.setDeviceMetricsOverride", {
+        width: 340,
+        height: 900,
+        deviceScaleFactor: 2,
+        mobile: false,
+    });
+    await send("Page.navigate", {
+        url: `chrome-extension://${extId}/popup.html`,
+    });
     let ready = false;
     for (let i = 0; i < 40 && !ready; i++) {
         ready = await evaluate(`!!document.querySelector('.add-language-row')`);
@@ -165,22 +200,46 @@ try {
     await evaluate(`document.querySelector('.add-language-row').click()`);
     await sleep(100);
     let s = await snap();
-    check("expand: input focused, popular list open, nothing highlighted", s.expanded && s.focused && s.open && s.activeIndex === -1, JSON.stringify({ focused: s.focused, open: s.open, active: s.activeIndex }));
-    check("expand: default favorites are just 'en'", s.favorites.join(",") === "en", s.favorites.join(","));
+    check(
+        "expand: input focused, popular list open, nothing highlighted",
+        s.expanded && s.focused && s.open && s.activeIndex === -1,
+        JSON.stringify({
+            focused: s.focused,
+            open: s.open,
+            active: s.activeIndex,
+        }),
+    );
+    check(
+        "expand: default favorites are just 'en'",
+        s.favorites.join(",") === "en",
+        s.favorites.join(","),
+    );
 
     // Enter with a blank input must not add anything.
     await press("Enter");
     s = await snap();
-    check("blank + Enter: no change", s.favorites.join(",") === "en" && s.open, s.favorites.join(","));
+    check(
+        "blank + Enter: no change",
+        s.favorites.join(",") === "en" && s.open,
+        s.favorites.join(","),
+    );
 
     // Arrow keys work on the popular list too.
     await press("ArrowDown");
     s = await snap();
     const popularCount = s.codes.length;
-    check("blank + ArrowDown: first popular item highlighted", s.activeIndex === 0 && s.activeCount === 1, `active=${s.activeIndex} of ${popularCount}`);
+    check(
+        "blank + ArrowDown: first popular item highlighted",
+        s.activeIndex === 0 && s.activeCount === 1,
+        `active=${s.activeIndex} of ${popularCount}`,
+    );
     await press("ArrowUp");
     s = await snap();
-    check("blank + ArrowUp: wraps to the last popular item", s.activeIndex === popularCount - 1, `active=${s.activeIndex}`);
+    check(
+        "blank + ArrowUp: wraps to the last popular item",
+        s.activeIndex === popularCount - 1,
+        `active=${s.activeIndex}`,
+    );
     const lastVisible = await evaluate(`(() => {
         const ul = document.querySelector('.language-dropdown');
         const li = ul.querySelector('li.active');
@@ -193,47 +252,100 @@ try {
     // Typing resets the highlight to the first match.
     await type("sp");
     s = await snap();
-    check("type 'sp': first match highlighted", s.value === "sp" && s.open && s.activeIndex === 0 && s.codes[0] === "es", `codes=${s.codes.slice(0, 3).join(",")} active=${s.activeIndex}`);
+    check(
+        "type 'sp': first match highlighted",
+        s.value === "sp" &&
+            s.open &&
+            s.activeIndex === 0 &&
+            s.codes[0] === "es",
+        `codes=${s.codes.slice(0, 3).join(",")} active=${s.activeIndex}`,
+    );
     const spCount = s.codes.length;
     await press("ArrowDown");
     await press("ArrowDown");
     s = await snap();
-    check("type 'sp' + 2x ArrowDown: third match highlighted", s.activeIndex === 2 && s.activeCount === 1, `active=${s.activeIndex}`);
+    check(
+        "type 'sp' + 2x ArrowDown: third match highlighted",
+        s.activeIndex === 2 && s.activeCount === 1,
+        `active=${s.activeIndex}`,
+    );
     await press("ArrowUp");
     s = await snap();
-    check("ArrowUp: back to second", s.activeIndex === 1, `active=${s.activeIndex}`);
+    check(
+        "ArrowUp: back to second",
+        s.activeIndex === 1,
+        `active=${s.activeIndex}`,
+    );
     await shot("search-keys-sp-second.png");
     for (let i = 0; i < spCount - 1; i++) await press("ArrowDown");
     s = await snap();
-    check("ArrowDown past the end: wraps to first", s.activeIndex === 0, `active=${s.activeIndex} of ${spCount}`);
-    const caretOk = await evaluate(`(() => { const i = document.getElementById('language-search'); return i.selectionStart === i.value.length; })()`);
+    check(
+        "ArrowDown past the end: wraps to first",
+        s.activeIndex === 0,
+        `active=${s.activeIndex} of ${spCount}`,
+    );
+    const caretOk = await evaluate(
+        `(() => { const i = document.getElementById('language-search'); return i.selectionStart === i.value.length; })()`,
+    );
     check("arrow keys do not move the caret", caretOk);
 
     // Enter adds the highlighted match, clears and closes, keeps focus.
     await press("Enter");
     s = await snap();
-    check("Enter: 'es' added, input cleared, dropdown closed, focus kept", s.favorites.join(",") === "en,es" && s.value === "" && !s.open && s.focused, JSON.stringify({ fav: s.favorites, value: s.value, open: s.open, focused: s.focused }));
+    check(
+        "Enter: 'es' added, input cleared, dropdown closed, focus kept",
+        s.favorites.join(",") === "en,es" &&
+            s.value === "" &&
+            !s.open &&
+            s.focused,
+        JSON.stringify({
+            fav: s.favorites,
+            value: s.value,
+            open: s.open,
+            focused: s.focused,
+        }),
+    );
 
     // ArrowDown reopens the closed dropdown.
     await press("ArrowDown");
     s = await snap();
-    check("ArrowDown on closed dropdown: reopens with first item highlighted", s.open && s.activeIndex === 0, `open=${s.open} active=${s.activeIndex}`);
+    check(
+        "ArrowDown on closed dropdown: reopens with first item highlighted",
+        s.open && s.activeIndex === 0,
+        `open=${s.open} active=${s.activeIndex}`,
+    );
 
     // Tab behaves like Enter and does not move focus away.
     await type("fr");
     s = await snap();
-    check("type 'fr': French first", s.codes[0] === "fr" && s.activeIndex === 0, s.codes.slice(0, 3).join(","));
+    check(
+        "type 'fr': French first",
+        s.codes[0] === "fr" && s.activeIndex === 0,
+        s.codes.slice(0, 3).join(","),
+    );
     await press("Tab");
     s = await snap();
-    check("Tab: 'fr' added and focus stays in the input", s.favorites.join(",") === "en,es,fr" && s.value === "" && s.focused, JSON.stringify({ fav: s.favorites, focused: s.focused }));
+    check(
+        "Tab: 'fr' added and focus stays in the input",
+        s.favorites.join(",") === "en,es,fr" && s.value === "" && s.focused,
+        JSON.stringify({ fav: s.favorites, focused: s.focused }),
+    );
 
     // Search limit: a broad term shows at most 10 rows and wraps within them.
     await type("a");
     s = await snap();
-    check("type 'a': capped at 10 matches", s.codes.length === 10 && s.activeIndex === 0, `${s.codes.length} rows`);
+    check(
+        "type 'a': capped at 10 matches",
+        s.codes.length === 10 && s.activeIndex === 0,
+        `${s.codes.length} rows`,
+    );
     await press("ArrowUp");
     s = await snap();
-    check("ArrowUp from first: wraps to the 10th visible row", s.activeIndex === 9, `active=${s.activeIndex}`);
+    check(
+        "ArrowUp from first: wraps to the 10th visible row",
+        s.activeIndex === 9,
+        `active=${s.activeIndex}`,
+    );
     const tenthVisible = await evaluate(`(() => {
         const ul = document.querySelector('.language-dropdown');
         const li = ul.querySelector('li.active');
@@ -243,29 +355,54 @@ try {
     check("10th row scrolled into view", tenthVisible);
     await press("Escape");
     s = await snap();
-    check("Escape: dropdown closed and input cleared", !s.open && s.value === "" && s.focused, JSON.stringify({ open: s.open, value: s.value }));
+    check(
+        "Escape: dropdown closed and input cleared",
+        !s.open && s.value === "" && s.focused,
+        JSON.stringify({ open: s.open, value: s.value }),
+    );
 
     // No results: Enter/Tab/arrows must be inert, Tab may move focus.
     await type("zzzz");
     s = await snap();
-    check("type 'zzzz': no results", s.open && s.noResults && s.codes.length === 0 && s.activeIndex === -1);
+    check(
+        "type 'zzzz': no results",
+        s.open && s.noResults && s.codes.length === 0 && s.activeIndex === -1,
+    );
     await press("ArrowDown");
     await press("Enter");
     s = await snap();
-    check("no results + ArrowDown/Enter: nothing happens", s.favorites.join(",") === "en,es,fr" && s.value === "zzzz" && s.open, JSON.stringify({ fav: s.favorites, value: s.value }));
+    check(
+        "no results + ArrowDown/Enter: nothing happens",
+        s.favorites.join(",") === "en,es,fr" && s.value === "zzzz" && s.open,
+        JSON.stringify({ fav: s.favorites, value: s.value }),
+    );
     await press("Tab");
     s = await snap();
-    check("no results + Tab: focus leaves the input (default Tab)", !s.focused && s.favorites.join(",") === "en,es,fr", `focused=${s.focused}`);
+    check(
+        "no results + Tab: focus leaves the input (default Tab)",
+        !s.focused && s.favorites.join(",") === "en,es,fr",
+        `focused=${s.focused}`,
+    );
 
     // Selecting an already-favorited match is a no-op that closes the list.
     await evaluate(`document.getElementById('language-search').focus()`);
-    await evaluate(`(() => { const i = document.getElementById('language-search'); i.value = ''; i.dispatchEvent(new InputEvent('input', { bubbles: true })); })()`);
+    await evaluate(
+        `(() => { const i = document.getElementById('language-search'); i.value = ''; i.dispatchEvent(new InputEvent('input', { bubbles: true })); })()`,
+    );
     await type("en");
     s = await snap();
-    check("type 'en': already-favorited English is first and highlighted", s.codes[0] === "en" && s.activeIndex === 0, s.codes.slice(0, 3).join(","));
+    check(
+        "type 'en': already-favorited English is first and highlighted",
+        s.codes[0] === "en" && s.activeIndex === 0,
+        s.codes.slice(0, 3).join(","),
+    );
     await press("Enter");
     s = await snap();
-    check("Enter on a favorite: no duplicate, dropdown closed", s.favorites.join(",") === "en,es,fr" && !s.open && s.value === "", JSON.stringify({ fav: s.favorites, open: s.open }));
+    check(
+        "Enter on a favorite: no duplicate, dropdown closed",
+        s.favorites.join(",") === "en,es,fr" && !s.open && s.value === "",
+        JSON.stringify({ fav: s.favorites, open: s.open }),
+    );
 
     // A keyboard highlight is visible on a favorited row too.
     await type("e");
@@ -280,15 +417,22 @@ try {
         const plain = lis.find(li => !li.classList.contains('active') && !li.classList.contains('selected'));
         return { active: getComputedStyle(active).backgroundColor, plain: getComputedStyle(plain).backgroundColor, activeIsFavorite: active.classList.contains('selected') };
     })()`);
-    check("active row background differs from a plain row (favorite highlighted)", bgs.activeIsFavorite && bgs.active !== bgs.plain, JSON.stringify(bgs));
+    check(
+        "active row background differs from a plain row (favorite highlighted)",
+        bgs.activeIsFavorite && bgs.active !== bgs.plain,
+        JSON.stringify(bgs),
+    );
     await shot("search-keys-e-active.png");
 } catch (e) {
     console.error("ERROR", e.message);
     process.exitCode = 1;
 } finally {
-    if (process.exitCode === undefined) process.exitCode = results.every(Boolean) ? 0 : 1;
+    if (process.exitCode === undefined)
+        process.exitCode = results.every(Boolean) ? 0 : 1;
     console.log(process.exitCode === 0 ? "RESULT: PASS" : "RESULT: FAIL");
     edge.kill();
     await sleep(300);
-    spawn("taskkill", ["/F", "/T", "/PID", String(edge.pid)], { stdio: "ignore" });
+    spawn("taskkill", ["/F", "/T", "/PID", String(edge.pid)], {
+        stdio: "ignore",
+    });
 }

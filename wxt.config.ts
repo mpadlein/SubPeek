@@ -45,6 +45,7 @@ export default defineConfig({
             "docs/**",
             ".temp/**",
             "store-assets/**",
+            "probes/**",
             "CLAUDE.md",
             "TODO.md",
         ],

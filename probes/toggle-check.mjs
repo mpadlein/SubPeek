@@ -12,7 +12,8 @@ import path from "node:path";
 
 const EDGE = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
 const EXT = path.resolve(".output/chrome-mv3");
-const URL_ = process.argv[2] || "https://www.youtube.com/results?search_query=mrbeast";
+const URL_ =
+    process.argv[2] || "https://www.youtube.com/results?search_query=mrbeast";
 const PORT = 9339;
 const PROFILE = path.resolve(".temp/toggle-check-profile");
 fs.rmSync(PROFILE, { recursive: true, force: true });
@@ -33,7 +34,9 @@ class CDP {
             const p = this.pending.get(m.id);
             this.pending.delete(m.id);
             if (!p) return;
-            m.error ? p.reject(new Error(m.error.message)) : p.resolve(m.result);
+            m.error
+                ? p.reject(new Error(m.error.message))
+                : p.resolve(m.result);
         };
     }
     send(method, params = {}, sessionId) {
@@ -50,7 +53,9 @@ class CDP {
 async function connect() {
     for (let i = 0; i < 60; i++) {
         try {
-            const info = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+            const info = await (
+                await fetch(`http://127.0.0.1:${PORT}/json/version`)
+            ).json();
             const ws = new WebSocket(info.webSocketDebuggerUrl);
             await new Promise((res, rej) => {
                 ws.onopen = res;
@@ -85,7 +90,9 @@ const edge = spawn(
 const results = [];
 const check = (name, ok, detail = "") => {
     results.push(ok);
-    console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`);
+    console.log(
+        `${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`,
+    );
 };
 
 // Everything the content script leaves in the page, in one snapshot.
@@ -115,29 +122,52 @@ try {
         pageTarget = targetInfos.find((t) => t.type === "page")?.targetId;
         if (!pageTarget) await sleep(300);
     }
-    const { sessionId } = await cdp.send("Target.attachToTarget", { targetId: pageTarget, flatten: true });
+    const { sessionId } = await cdp.send("Target.attachToTarget", {
+        targetId: pageTarget,
+        flatten: true,
+    });
     const send = (m, p) => cdp.send(m, p, sessionId);
     const evaluate = async (expression, sid = sessionId) => {
-        const r = await cdp.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true }, sid);
+        const r = await cdp.send(
+            "Runtime.evaluate",
+            { expression, awaitPromise: true, returnByValue: true },
+            sid,
+        );
         if (r.exceptionDetails) {
-            throw new Error(r.exceptionDetails.text + " " + (r.exceptionDetails.exception?.description || ""));
+            throw new Error(
+                r.exceptionDetails.text +
+                    " " +
+                    (r.exceptionDetails.exception?.description || ""),
+            );
         }
         return r.result.value;
     };
-    const mouse = (type, x, y, extra = {}) => send("Input.dispatchMouseEvent", { type, x, y, ...extra });
+    const mouse = (type, x, y, extra = {}) =>
+        send("Input.dispatchMouseEvent", { type, x, y, ...extra });
     await send("Page.enable");
     await send("Network.enable");
-    await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 1400, deviceScaleFactor: 1, mobile: false });
+    await send("Emulation.setDeviceMetricsOverride", {
+        width: 1280,
+        height: 1400,
+        deviceScaleFactor: 1,
+        mobile: false,
+    });
 
     // Count player requests issued by the content script (initiator stack in
     // the extension bundle), so YouTube's own player calls are not counted.
     let extPlayerRequests = 0;
     cdp.on((m) => {
-        if (m.method !== "Network.requestWillBeSent" || m.sessionId !== sessionId) return;
+        if (
+            m.method !== "Network.requestWillBeSent" ||
+            m.sessionId !== sessionId
+        )
+            return;
         const url = m.params.request.url;
-        if (!url.includes("/youtubei/v1/player") && !url.includes("/watch?v=")) return;
+        if (!url.includes("/youtubei/v1/player") && !url.includes("/watch?v="))
+            return;
         const frames = m.params.initiator?.stack?.callFrames || [];
-        if (frames.some((f) => f.url.startsWith("chrome-extension://"))) extPlayerRequests++;
+        if (frames.some((f) => f.url.startsWith("chrome-extension://")))
+            extPlayerRequests++;
     });
 
     console.log("url:", URL_);
@@ -160,7 +190,10 @@ try {
 
     const before = await evaluate(DOM_SNAPSHOT);
     console.log("on (initial):", JSON.stringify(before));
-    check("initial mount: one container per wrapper", before.multiContainer === 0 && before.nestedWrappers === 0);
+    check(
+        "initial mount: one container per wrapper",
+        before.multiContainer === 0 && before.nestedWrappers === 0,
+    );
     console.log("player requests by extension so far:", extPlayerRequests);
 
     // Remember where each wrapped <img> lives so we can check it goes back.
@@ -182,8 +215,14 @@ try {
     })()`);
     await mouse("mouseMoved", badgePt.x, badgePt.y);
     await sleep(100);
-    await mouse("mousePressed", badgePt.x, badgePt.y, { button: "left", clickCount: 1 });
-    await mouse("mouseReleased", badgePt.x, badgePt.y, { button: "left", clickCount: 1 });
+    await mouse("mousePressed", badgePt.x, badgePt.y, {
+        button: "left",
+        clickCount: 1,
+    });
+    await mouse("mouseReleased", badgePt.x, badgePt.y, {
+        button: "left",
+        clickCount: 1,
+    });
     await sleep(800);
     const popupState = await evaluate(`(() => {
         const btn = document.querySelector('.ytbext-popup__header-actions .ytbext-popup__header-action');
@@ -191,23 +230,45 @@ try {
         return { open: !!document.querySelector('.ytbext-popup'), title: btn && btn.title,
                  pt: r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null };
     })()`);
-    check("track popup opens with a power button", popupState.open && !!popupState.pt, popupState.title || "");
+    check(
+        "track popup opens with a power button",
+        popupState.open && !!popupState.pt,
+        popupState.title || "",
+    );
     if (!popupState.pt) throw new Error("no power button");
     await mouse("mouseMoved", popupState.pt.x, popupState.pt.y);
     await sleep(100);
-    await mouse("mousePressed", popupState.pt.x, popupState.pt.y, { button: "left", clickCount: 1 });
-    await mouse("mouseReleased", popupState.pt.x, popupState.pt.y, { button: "left", clickCount: 1 });
+    await mouse("mousePressed", popupState.pt.x, popupState.pt.y, {
+        button: "left",
+        clickCount: 1,
+    });
+    await mouse("mouseReleased", popupState.pt.x, popupState.pt.y, {
+        button: "left",
+        clickCount: 1,
+    });
     await sleep(1000);
 
     const off = await evaluate(DOM_SNAPSHOT);
     console.log("off:", JSON.stringify(off));
-    check("off: no extension nodes left in the page", off.anyNode === 0 && off.processed === 0 && !off.popup, `anyNode=${off.anyNode} processed=${off.processed} popup=${off.popup}`);
-    check("off: thumbnails still present", off.thumbImgs >= before.wrappers, `${off.thumbImgs} imgs`);
+    check(
+        "off: no extension nodes left in the page",
+        off.anyNode === 0 && off.processed === 0 && !off.popup,
+        `anyNode=${off.anyNode} processed=${off.processed} popup=${off.popup}`,
+    );
+    check(
+        "off: thumbnails still present",
+        off.thumbImgs >= before.wrappers,
+        `${off.thumbImgs} imgs`,
+    );
     const restored = await evaluate(`(() => {
         const imgs = [...document.querySelectorAll('img[data-probe-key]')];
         return { total: imgs.length, ok: imgs.filter(img => img.parentElement?.dataset.probeKey === img.dataset.probeKey).length };
     })()`);
-    check("off: every <img> is back under its original parent", restored.total === parentsBefore && restored.ok === restored.total, `${restored.ok}/${restored.total}`);
+    check(
+        "off: every <img> is back under its original parent",
+        restored.total === parentsBefore && restored.ok === restored.total,
+        `${restored.ok}/${restored.total}`,
+    );
 
     // Scroll to make YouTube load more cards; nothing of ours may react.
     const reqBeforeScroll = extPlayerRequests;
@@ -217,32 +278,63 @@ try {
     }
     await sleep(2000);
     const offAfterScroll = await evaluate(DOM_SNAPSHOT);
-    check("off: still no extension nodes after scrolling", offAfterScroll.anyNode === 0 && offAfterScroll.processed === 0, `anyNode=${offAfterScroll.anyNode}`);
-    check("off: no player requests from the extension while scrolling", extPlayerRequests === reqBeforeScroll, `${extPlayerRequests - reqBeforeScroll} new`);
+    check(
+        "off: still no extension nodes after scrolling",
+        offAfterScroll.anyNode === 0 && offAfterScroll.processed === 0,
+        `anyNode=${offAfterScroll.anyNode}`,
+    );
+    check(
+        "off: no player requests from the extension while scrolling",
+        extPlayerRequests === reqBeforeScroll,
+        `${extPlayerRequests - reqBeforeScroll} new`,
+    );
     await evaluate(`window.scrollTo(0, 0)`);
     await sleep(500);
 
     // ── Toolbar popup reflects OFF, and its switch turns things back ON ──
     const { targetInfos } = await cdp.send("Target.getTargets");
-    const bg = targetInfos.find((t) => t.url.startsWith("chrome-extension://") && t.url.endsWith("/background.js"));
+    const bg = targetInfos.find(
+        (t) =>
+            t.url.startsWith("chrome-extension://") &&
+            t.url.endsWith("/background.js"),
+    );
     if (!bg) throw new Error("extension background target not found");
     const extId = new URL(bg.url).host;
     // Keep the YouTube tab in the foreground: a background tab does not run
     // the rendering pipeline, and IntersectionObserver never fires there.
-    const { targetId: popupTarget } = await cdp.send("Target.createTarget", { url: `chrome-extension://${extId}/popup.html`, background: true });
-    const { sessionId: popupSession } = await cdp.send("Target.attachToTarget", { targetId: popupTarget, flatten: true });
+    const { targetId: popupTarget } = await cdp.send("Target.createTarget", {
+        url: `chrome-extension://${extId}/popup.html`,
+        background: true,
+    });
+    const { sessionId: popupSession } = await cdp.send(
+        "Target.attachToTarget",
+        { targetId: popupTarget, flatten: true },
+    );
     await cdp.send("Target.activateTarget", { targetId: pageTarget });
     await cdp.send("Runtime.enable", {}, popupSession);
     let switchState = null;
     for (let i = 0; i < 20 && switchState === null; i++) {
-        switchState = await evaluate(`(() => { const s = document.querySelector('.switch-input'); return s ? s.checked : null; })()`, popupSession);
+        switchState = await evaluate(
+            `(() => { const s = document.querySelector('.switch-input'); return s ? s.checked : null; })()`,
+            popupSession,
+        );
         if (switchState === null) await sleep(250);
     }
-    check("toolbar popup switch shows OFF", switchState === false, `checked=${switchState}`);
+    check(
+        "toolbar popup switch shows OFF",
+        switchState === false,
+        `checked=${switchState}`,
+    );
 
-    await evaluate(`document.querySelector('.switch-input').click()`, popupSession);
+    await evaluate(
+        `document.querySelector('.switch-input').click()`,
+        popupSession,
+    );
     await sleep(300);
-    const switchAfter = await evaluate(`document.querySelector('.switch-input').checked`, popupSession);
+    const switchAfter = await evaluate(
+        `document.querySelector('.switch-input').checked`,
+        popupSession,
+    );
     check("toolbar popup switch flips to ON", switchAfter === true);
     await cdp.send("Target.activateTarget", { targetId: pageTarget });
     const visibility = await evaluate(`document.visibilityState`);
@@ -259,9 +351,21 @@ try {
     await sleep(1000);
     on = await evaluate(DOM_SNAPSHOT);
     console.log("on (again):", JSON.stringify(on));
-    check("on again: badges rendered", on.badges >= 4, `${on.badges} badges, ${on.wrappers} wrappers`);
-    check("on again: one container per wrapper, no nested wrappers", on.multiContainer === 0 && on.nestedWrappers === 0, `multi=${on.multiContainer} nested=${on.nestedWrappers}`);
-    check("on again: badge count on cards matches first mount", on.wrapperBadges === before.wrapperBadges, `${on.wrapperBadges} vs ${before.wrapperBadges}`);
+    check(
+        "on again: badges rendered",
+        on.badges >= 4,
+        `${on.badges} badges, ${on.wrappers} wrappers`,
+    );
+    check(
+        "on again: one container per wrapper, no nested wrappers",
+        on.multiContainer === 0 && on.nestedWrappers === 0,
+        `multi=${on.multiContainer} nested=${on.nestedWrappers}`,
+    );
+    check(
+        "on again: badge count on cards matches first mount",
+        on.wrapperBadges === before.wrapperBadges,
+        `${on.wrapperBadges} vs ${before.wrapperBadges}`,
+    );
 
     // Track popup still works after the cycle.
     const badgePt2 = await evaluate(`(() => {
@@ -271,27 +375,55 @@ try {
     })()`);
     await mouse("mouseMoved", badgePt2.x, badgePt2.y);
     await sleep(100);
-    await mouse("mousePressed", badgePt2.x, badgePt2.y, { button: "left", clickCount: 1 });
-    await mouse("mouseReleased", badgePt2.x, badgePt2.y, { button: "left", clickCount: 1 });
+    await mouse("mousePressed", badgePt2.x, badgePt2.y, {
+        button: "left",
+        clickCount: 1,
+    });
+    await mouse("mouseReleased", badgePt2.x, badgePt2.y, {
+        button: "left",
+        clickCount: 1,
+    });
     await sleep(800);
-    const popupAgain = await evaluate(`({ open: !!document.querySelector('.ytbext-popup'), url: location.href })`);
+    const popupAgain = await evaluate(
+        `({ open: !!document.querySelector('.ytbext-popup'), url: location.href })`,
+    );
     check("on again: badge click opens the track popup", popupAgain.open);
-    check("on again: badge click does not navigate", popupAgain.url === URL_ || popupAgain.url.startsWith(URL_), popupAgain.url.slice(0, 60));
+    check(
+        "on again: badge click does not navigate",
+        popupAgain.url === URL_ || popupAgain.url.startsWith(URL_),
+        popupAgain.url.slice(0, 60),
+    );
 
     // Switch OFF from the toolbar popup closes the in-page popup too.
-    await evaluate(`document.querySelector('.switch-input').click()`, popupSession);
+    await evaluate(
+        `document.querySelector('.switch-input').click()`,
+        popupSession,
+    );
     await sleep(800);
     const offAgain = await evaluate(DOM_SNAPSHOT);
-    check("off from toolbar: popup closed and nodes gone", !offAgain.popup && offAgain.anyNode === 0, `anyNode=${offAgain.anyNode}`);
+    check(
+        "off from toolbar: popup closed and nodes gone",
+        !offAgain.popup && offAgain.anyNode === 0,
+        `anyNode=${offAgain.anyNode}`,
+    );
 } catch (e) {
     if (process.exitCode !== 2) {
         console.error("ERROR", e.message);
         process.exitCode = 1;
     }
 } finally {
-    if (process.exitCode === undefined) process.exitCode = results.every(Boolean) ? 0 : 1;
-    console.log(process.exitCode === 0 ? "RESULT: PASS" : process.exitCode === 2 ? "RESULT: SKIP" : "RESULT: FAIL");
+    if (process.exitCode === undefined)
+        process.exitCode = results.every(Boolean) ? 0 : 1;
+    console.log(
+        process.exitCode === 0
+            ? "RESULT: PASS"
+            : process.exitCode === 2
+              ? "RESULT: SKIP"
+              : "RESULT: FAIL",
+    );
     edge.kill();
     await sleep(300);
-    spawn("taskkill", ["/F", "/T", "/PID", String(edge.pid)], { stdio: "ignore" });
+    spawn("taskkill", ["/F", "/T", "/PID", String(edge.pid)], {
+        stdio: "ignore",
+    });
 }

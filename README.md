@@ -58,10 +58,13 @@ npm install
 | `npm run build`         | Production build (Chrome, MV3)           |
 | `npm run build:firefox` | Production build (Firefox)               |
 | `npm run compile`       | Type-check with `tsc --noEmit`           |
+| `npm test`              | Unit tests (Vitest)                      |
+| `npm run format`        | Format with Prettier                     |
+| `npm run probe:<name>`  | Headless browser checks (see `probes/`)  |
 | `npm run zip`           | Package Chrome build for distribution    |
 | `npm run zip:firefox`   | Package Firefox build (+ source archive) |
 
-There is no test framework configured.
+Unit tests run with [Vitest](https://vitest.dev/) (`npm test`, sources in `tests/`). The scripts in `probes/` drive the built extension in a headless browser against youtube.com (`npm run probe:toggle` and friends); they need Edge or Firefox installed plus network access, so they are not part of CI.
 
 ## Building from source
 
@@ -89,6 +92,8 @@ src/
     popup/              # Settings UI (favorite languages)
   common/               # Shared storage, settings, cache, messaging, icons, types
   utils/                # Logger (auto-imported by WXT)
+tests/                  # Vitest unit tests
+probes/                 # Headless-browser regression checks (not shipped)
 public/
   icon/                 # Extension icons
   fonts/                # Bundled Inter font (SIL OFL 1.1)
