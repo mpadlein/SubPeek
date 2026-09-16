@@ -199,7 +199,7 @@ try {
         evaluate(`(() => {
             const a = document.getElementById('origin-check-${id}');
             const c = a && a.querySelector('.ytbext-embed-container');
-            return !!c && c.querySelectorAll('.ytbext-item').length === 2 && !c.querySelector('.ytbext-loading__spinner');
+            return !!c && c.querySelectorAll('.ytbext-item').length === 2;
         })()`);
     for (const c of CASES) {
         let ok = false;

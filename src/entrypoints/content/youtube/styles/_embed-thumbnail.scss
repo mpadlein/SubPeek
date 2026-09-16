@@ -158,14 +158,4 @@ $icon-opacity-active: 1;
             border-color: transparent;
         }
     }
-
-    .#{$prefix}-loading__spinner {
-        margin: auto;
-        width: 10px;
-        height: 10px;
-        border: 2px solid $border-light;
-        border-top-color: $color-primary;
-        border-radius: $radius-full;
-        animation: #{$prefix}-spin 1.2s linear infinite;
-    }
 }

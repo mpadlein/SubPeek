@@ -56,7 +56,7 @@ Unit tests: `npm test` (Vitest, `tests/`). Browser-level checks: the scripts in 
 
 ### Rendering (`content/youtube/ui/`)
 
-- `initEmbed()` has three states: `loading` (spinner), `ready` (badges), `unavailable` (renders nothing at all). It filters out auto-generated captions and the original audio track before rendering, so badges only reflect human captions and dubs.
+- `initEmbed()` renders the badges once the lookup resolves, or nothing at all when the video is unavailable: drawing "0 tracks" would look identical to a video without captions. There is no loading state. It filters out auto-generated captions and the original audio track before rendering, so badges only reflect human captions and dubs.
 - Badges are shown only for favorite languages, followed by a `+N` count of the rest. Tooltips are pure CSS (`.ytbext-tooltip` / `.ytbext-tooltip__text`).
 - Each embed container listens for the `ytbext:render` DOM event; `rerenderEmbeds()` dispatches it to every container, and `main.ts` subscribes that to `Settings.langCodes` in `start()`.
 - `showTrackPopup()` toggles: clicking the badge that opened the popup closes it, clicking another badge switches to it. It also closes on outside click, Escape and scroll; those three listeners are registered when a popup opens and removed when it closes, so `stop()` leaves none behind. Only one `.ytbext-popup` exists at a time, appended to `document.body` and tracked in `activePopup`; `closePopup()` is exported for `stop()`.

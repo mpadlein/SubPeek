@@ -132,7 +132,7 @@ try {
     let ready = false;
     while (Date.now() - start < 60000) {
         ready = await evaluate(
-            `document.querySelectorAll('.ytbext-embed-container .ytbext-badge').length >= 4 && document.querySelectorAll('.ytbext-loading__spinner').length === 0`,
+            `document.querySelectorAll('.ytbext-embed-container .ytbext-badge').length >= 4`,
         );
         if (ready) break;
         await sleep(500);

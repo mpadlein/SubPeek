@@ -92,7 +92,6 @@ const check = (name, ok, detail = "") => {
     );
 };
 const BADGES = `document.querySelectorAll('.ytbext-embed-container .ytbext-badge').length`;
-const SPINNERS = `document.querySelectorAll('.ytbext-loading__spinner').length`;
 
 try {
     const cdp = await connect();
@@ -184,8 +183,7 @@ try {
     const waitForBadges = async () => {
         const t0 = Date.now();
         while (Date.now() - t0 < 60000) {
-            if (await evaluate(`${BADGES} >= 4 && ${SPINNERS} === 0`))
-                return true;
+            if (await evaluate(`${BADGES} >= 4`)) return true;
             await sleep(500);
         }
         return false;

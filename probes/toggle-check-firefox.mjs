@@ -116,7 +116,6 @@ const DOM_SNAPSHOT = `JSON.stringify({
     wrappers: document.querySelectorAll('.ytbext-thumbnail-wrapper').length,
     containers: document.querySelectorAll('.ytbext-embed-container').length,
     badges: document.querySelectorAll('.ytbext-embed-container .ytbext-badge').length,
-    spinners: document.querySelectorAll('.ytbext-loading__spinner').length,
     processed: document.querySelectorAll('img[data-ytbext-processed]').length,
     anyNode: document.querySelectorAll('[class*="ytbext-"]').length,
     popup: !!document.querySelector('.ytbext-popup'),
@@ -187,7 +186,7 @@ try {
     let ready = false;
     while (Date.now() - t0 < 60000) {
         const s = await snapshot();
-        if (s.badges >= 2 && s.spinners === 0) {
+        if (s.badges >= 2) {
             ready = true;
             break;
         }

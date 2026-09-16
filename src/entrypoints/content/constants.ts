@@ -37,9 +37,6 @@ export const CSS = {
     MOD_TOP: "is-top",
     MOD_BOTTOM: "is-bottom",
 
-    // Loading
-    LOADING_SPINNER: `${CSS_PREFIX}-loading__spinner`,
-
     // Tooltip
     TOOLTIP: `${CSS_PREFIX}-tooltip`,
     TOOLTIP_TEXT: `${CSS_PREFIX}-tooltip__text`,

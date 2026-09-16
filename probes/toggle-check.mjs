@@ -102,7 +102,6 @@ const DOM_SNAPSHOT = `(() => ({
     badges: document.querySelectorAll('.ytbext-embed-container .ytbext-badge').length,
     // Excludes the badge mirrored into an active hover preview.
     wrapperBadges: document.querySelectorAll('.ytbext-thumbnail-wrapper .ytbext-badge').length,
-    spinners: document.querySelectorAll('.ytbext-loading__spinner').length,
     previewHosts: document.querySelectorAll('.ytbext-preview-host').length,
     processed: document.querySelectorAll('img[data-ytbext-processed]').length,
     anyNode: document.querySelectorAll('[class*="ytbext-"]').length,
@@ -176,7 +175,7 @@ try {
     let ready = false;
     while (Date.now() - start < 60000) {
         ready = await evaluate(
-            `document.querySelectorAll('.ytbext-embed-container .ytbext-badge').length >= 4 && document.querySelectorAll('.ytbext-loading__spinner').length === 0`,
+            `document.querySelectorAll('.ytbext-embed-container .ytbext-badge').length >= 4`,
         );
         if (ready) break;
         await sleep(500);
@@ -345,7 +344,7 @@ try {
     let on = null;
     while (Date.now() - t0 < 30000) {
         on = await evaluate(DOM_SNAPSHOT);
-        if (on.badges >= 4 && on.spinners === 0) break;
+        if (on.badges >= 4) break;
         await sleep(500);
     }
     await sleep(1000);
