@@ -1,7 +1,7 @@
 import { html, render, type TemplateResult } from "lit-html";
 import { classMap } from "lit-html/directives/class-map.js";
 
-import { EXTENSION_EVENTS } from "@/common/constants";
+import { messaging } from "@/common/messaging";
 import { Settings } from "@/common/settings";
 import type { TrackItem } from "@/common/types";
 import {
@@ -22,11 +22,9 @@ function openOptionsPage(e: Event): void {
     e.stopPropagation();
     // runtime.openOptionsPage() is not exposed to content scripts - the
     // background script opens it for us.
-    browser.runtime
-        .sendMessage({ event: EXTENSION_EVENTS.openOptionsPage })
-        .catch((error) => {
-            logger.error("Could not open options page:", error);
-        });
+    messaging.openOptionsPage().catch((error) => {
+        logger.error("Could not open options page:", error);
+    });
 }
 
 // This popup only exists while SubPeek is on, so the button can only ever

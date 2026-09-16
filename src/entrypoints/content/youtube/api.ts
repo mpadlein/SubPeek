@@ -1,4 +1,5 @@
-import { CACHE_TTL_SECONDS, EXTENSION_EVENTS } from "@/common/constants";
+import { CACHE_TTL_SECONDS } from "@/common/constants";
+import { messaging } from "@/common/messaging";
 import { Settings } from "@/common/settings";
 import type { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
 import pLimit from "p-limit";
@@ -212,33 +213,24 @@ function parseVideoResponse(playerResp: PlayerResponse): VideoInfo {
 
 async function getCache(videoId: string): Promise<VideoInfo | null> {
     try {
-        const now = Date.now() / 1000;
-        const response = await browser.runtime.sendMessage({
-            event: EXTENSION_EVENTS.getCacheVideoInfo,
-            data: { videoId },
-        });
+        const entry = await messaging.getCachedVideoInfo(videoId);
+        if (!entry) return null;
 
-        if (response?.videoId === videoId && response.cacheData) {
-            const { data, timestamp } = response.cacheData;
-            const age = now - timestamp;
-            if (age < CACHE_TTL_SECONDS) {
-                metricsProxy.cacheHit++;
-                return data;
-            }
+        const age = Date.now() / 1000 - entry.timestamp;
+        if (age >= CACHE_TTL_SECONDS) {
             metricsProxy.cacheExpired++;
+            return null;
         }
-        return null;
+        metricsProxy.cacheHit++;
+        return entry.data;
     } catch (error) {
         logger.error("Cache read error:", error);
         return null;
     }
 }
 
-async function saveCache(videoId: string, data: VideoInfo): Promise<void> {
-    await browser.runtime.sendMessage({
-        event: EXTENSION_EVENTS.setCacheVideoInfo,
-        data: { videoId, data },
-    });
+function saveCache(videoId: string, data: VideoInfo): Promise<void> {
+    return messaging.saveVideoInfo(videoId, data);
 }
 
 /**

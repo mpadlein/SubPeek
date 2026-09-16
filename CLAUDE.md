@@ -72,7 +72,7 @@ There is no test framework. Verify changes by building and loading `.output/chro
 
 ### Content script <-> background communication
 
-`browser.runtime.sendMessage({ event, data })` with event names from `EXTENSION_EVENTS` (`common/constants.ts`). The background replies via `sendResponse`; every handler must `return true` to keep the channel open for the async reply.
+Typed through `common/messaging.ts`. Content scripts call `messaging.getCachedVideoInfo()`, `messaging.saveVideoInfo()` and `messaging.openOptionsPage()`; the background script registers one async handler per message type with `listenForMessages()`, which replies with the resolved value and returns `true` from the `onMessage` listener to keep the channel open. `Message` and `Responses` in that file are the single source of truth for the protocol: adding a message means adding it to both, and the compiler then flags every caller and handler that needs updating.
 
 ### Styling
 
