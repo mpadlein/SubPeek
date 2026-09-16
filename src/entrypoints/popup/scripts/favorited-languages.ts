@@ -1,7 +1,13 @@
 import { Settings } from "@/common/settings";
 import { html, nothing } from "lit-html";
-import { getNameOfCode } from "./lib/languages";
+import { languageName } from "./lib/languages";
 
+/**
+ * The favorites section of the settings popup: one tag per language with a
+ * remove button and a right-click menu to reorder. State (the open context
+ * menu) lives in this closure; handlers call `rerender` to redraw the app and
+ * the returned template function reads the state back.
+ */
 export function createFavoritedLanguages(rerender: () => void) {
     let contextMenu: { code: string; x: number; y: number } | null = null;
 
@@ -15,26 +21,24 @@ export function createFavoritedLanguages(rerender: () => void) {
         Settings.langCodes.remove(code);
     }
 
-    function handleMoveUp(code: string) {
+    /** Moves `code` one place up (-1) or down (+1) among the favorites. */
+    function moveFavorite(code: string, delta: -1 | 1) {
         const codes = [...Settings.langCodes.get()];
-        const i = codes.indexOf(code);
-        if (i <= 0) return;
-        [codes[i - 1], codes[i]] = [codes[i] as string, codes[i - 1] as string];
-        Settings.langCodes.set(codes);
-        closeMenu();
-    }
-
-    function handleMoveDown(code: string) {
-        const codes = [...Settings.langCodes.get()];
-        const i = codes.indexOf(code);
-        if (i === -1 || i >= codes.length - 1) return;
-        [codes[i], codes[i + 1]] = [codes[i + 1] as string, codes[i] as string];
+        const from = codes.indexOf(code);
+        const to = from + delta;
+        if (from === -1 || to < 0 || to >= codes.length) return;
+        codes.splice(to, 0, ...codes.splice(from, 1));
         Settings.langCodes.set(codes);
         closeMenu();
     }
 
     function handleContextMenu(e: MouseEvent, code: string) {
         e.preventDefault();
+        // A right-click on another tag while the menu is open must move the
+        // menu, not close it: drop the pending close listeners before this
+        // event bubbles up to them, and re-add them only after it has finished
+        // bubbling (the setTimeout below), or the right-click that opened the
+        // menu would close it again.
         document.removeEventListener("click", closeMenu);
         document.removeEventListener("contextmenu", closeMenu);
         const popup = document.getElementById("app")!;
@@ -64,7 +68,7 @@ export function createFavoritedLanguages(rerender: () => void) {
                 <button
                     class="ctx-menu-item"
                     ?disabled=${i <= 0}
-                    @click=${() => handleMoveUp(code)}
+                    @click=${() => moveFavorite(code, -1)}
                 >
                     <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                         <path
@@ -80,7 +84,7 @@ export function createFavoritedLanguages(rerender: () => void) {
                 <button
                     class="ctx-menu-item"
                     ?disabled=${i >= codes.length - 1}
-                    @click=${() => handleMoveDown(code)}
+                    @click=${() => moveFavorite(code, 1)}
                 >
                     <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                         <path
@@ -98,7 +102,7 @@ export function createFavoritedLanguages(rerender: () => void) {
     }
 
     function languageTagTemplate(code: string) {
-        const name = getNameOfCode(code);
+        const name = languageName(code);
         return html`
             <span
                 class="language-tag"

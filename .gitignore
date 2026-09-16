@@ -24,13 +24,10 @@ web-ext.config.ts
 *.njsproj
 *.sln
 *.sw?
-.temp
-t.*
 
-# 
+# Local notes, tooling and probe logs
 .claude
 docs
 TODO.md
 *-TODO.md
-out
-.profile
+.temp

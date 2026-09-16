@@ -40,6 +40,13 @@ function feedbackContext(app: HTMLElement): string | null {
     return new URL(link!.href).searchParams.get("entry.883462684");
 }
 
+/** The favorite tags, in display order. */
+function favoriteCodes(app: HTMLElement): (string | undefined)[] {
+    return Array.from(app.querySelectorAll(".tag-code")).map((el) =>
+        el.textContent?.trim(),
+    );
+}
+
 describe("settings popup", () => {
     it("shows the version and the enabled switch", async () => {
         const app = await renderPopup(CHROME_UA);
@@ -69,16 +76,29 @@ describe("settings popup", () => {
         const app = await renderPopup(CHROME_UA, {
             "SETTINGS:langCodes": ["en", "ja"],
         });
-        const codes = () =>
-            Array.from(app.querySelectorAll(".tag-code")).map((el) =>
-                el.textContent?.trim(),
-            );
-        expect(codes()).toEqual(["en", "ja"]);
+        expect(favoriteCodes(app)).toEqual(["en", "ja"]);
 
         app.querySelector<HTMLButtonElement>(".tag-remove")!.click();
         await flush();
 
-        expect(codes()).toEqual(["ja"]);
+        expect(favoriteCodes(app)).toEqual(["ja"]);
+    });
+
+    it("moves a favorite down from its context menu", async () => {
+        const app = await renderPopup(CHROME_UA, {
+            "SETTINGS:langCodes": ["en", "ja", "fr"],
+        });
+
+        app.querySelector('.language-tag[data-code="en"]')!.dispatchEvent(
+            new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+        );
+        const moveDown = Array.from(
+            app.querySelectorAll<HTMLButtonElement>(".ctx-menu-item"),
+        ).find((button) => button.textContent?.includes("Move down"))!;
+        moveDown.click();
+        await flush();
+
+        expect(favoriteCodes(app)).toEqual(["ja", "en", "fr"]);
     });
 
     it("re-renders when the stored switch state changes elsewhere", async () => {

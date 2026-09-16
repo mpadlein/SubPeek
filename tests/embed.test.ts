@@ -25,8 +25,9 @@ const info: VideoInfo = {
 const VIDEO_URL = "https://www.youtube.com/watch?v=abc";
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-// Fresh modules per test: the embed module subscribes to the favorites at
-// import time, and the settings wrapper caches storage in memory.
+// Fresh modules per test: the settings wrapper caches storage in memory.
+// main.ts subscribes rerenderEmbeds() to the favorites in start(); do the same
+// here so a storage change redraws the mounted embeds.
 async function loadEmbed(favorites: string[]) {
     fakeBrowser.reset();
     await fakeBrowser.storage.local.set({ "SETTINGS:langCodes": favorites });
@@ -34,7 +35,9 @@ async function loadEmbed(favorites: string[]) {
     vi.resetModules();
     const { Settings } = await import("@/common/settings");
     await Settings.ready();
-    return import("@/entrypoints/content/youtube/ui/embed");
+    const embed = await import("@/entrypoints/content/youtube/ui/embed");
+    Settings.langCodes.subscribe(embed.rerenderEmbeds);
+    return embed;
 }
 
 async function mount(favorites: string[]) {

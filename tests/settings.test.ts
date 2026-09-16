@@ -76,6 +76,17 @@ describe("Settings", () => {
         expect(listener).toHaveBeenCalledOnce();
     });
 
+    it("stops notifying once unsubscribed", async () => {
+        const Settings = await load();
+        const listener = vi.fn();
+        const unsubscribe = Settings.enabled.subscribe(listener);
+
+        unsubscribe();
+        await fakeBrowser.storage.local.set({ "SETTINGS:enabled": false });
+
+        expect(listener).not.toHaveBeenCalled();
+    });
+
     it("keeps notifying the other subscribers when one throws", async () => {
         const Settings = await load();
         const consoleError = vi

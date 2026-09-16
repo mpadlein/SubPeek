@@ -1,10 +1,17 @@
 import { Settings } from "@/common/settings";
 import { html, nothing } from "lit-html";
-import { getLanguagesFilter, getPopularLanguages } from "./lib/languages";
+import { getPopularLanguages, searchLanguages } from "./lib/languages";
 import { type LanguageItem } from "./types";
 
 const SEARCH_DISPLAY_LIMIT = 10;
 
+/**
+ * The "Add language" section of the settings popup: a button that expands
+ * into a search input with a dropdown of matches. All UI state (search text,
+ * open/expanded flags, keyboard highlight) lives in this closure; handlers
+ * call `rerender` to redraw the app and the returned template function reads
+ * the state back.
+ */
 export function createLanguageDropdown(rerender: () => void) {
     let searchText = "";
     let dropdownOpen = false;
@@ -16,10 +23,7 @@ export function createLanguageDropdown(rerender: () => void) {
 
     function visibleLanguages(): LanguageItem[] {
         if (searchText.length > 0) {
-            return getLanguagesFilter(searchText).slice(
-                0,
-                SEARCH_DISPLAY_LIMIT,
-            );
+            return searchLanguages(searchText).slice(0, SEARCH_DISPLAY_LIMIT);
         }
         return getPopularLanguages();
     }
@@ -128,6 +132,8 @@ export function createLanguageDropdown(rerender: () => void) {
         `;
     }
 
+    // Closes the dropdown on a click elsewhere. Registered once per page: the
+    // factory runs once and the popup lives as long as its document.
     document.addEventListener("click", (e) => {
         if (
             !(e.target as HTMLElement).closest(".language-selector") &&

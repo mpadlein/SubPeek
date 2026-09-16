@@ -36,7 +36,7 @@ function badgeListTemplate(
     return html`
         ${favoriteTracks.map((t) => badgeTemplate(t))}
         ${favoriteTracks.length > 0 && remaining > 0
-            ? html`<span class="${CSS.BADGE} ${CSS.BADGE}--more">
+            ? html`<span class="${CSS.BADGE} ${CSS.BADGE_MORE}">
                   +${remaining}
               </span>`
             : nothing}
@@ -186,13 +186,10 @@ export async function initEmbed(
     container.addEventListener(EVENT.RENDER, updateView);
 }
 
-function handleUserLangCodesUpdate() {
+/** Redraws every mounted embed; main.ts calls it when the favorites change. */
+export function rerenderEmbeds(): void {
+    logger.debug("Favorites changed, re-rendering embeds");
     document.querySelectorAll(`.${CSS.CONTAINER}`).forEach((el) => {
         el.dispatchEvent(new CustomEvent(EVENT.RENDER));
     });
 }
-
-Settings.langCodes.subscribe(() => {
-    logger.debug("User language codes updated, re-rendering embeds...");
-    handleUserLangCodesUpdate();
-});

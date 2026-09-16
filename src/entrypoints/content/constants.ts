@@ -1,6 +1,6 @@
 // CSS class names (BEM) and DOM event names used by the content script.
 
-// CSS class prefix
+// Class-name prefix; must match $prefix in youtube/styles/_variables.scss.
 export const CSS_PREFIX = "ytbext";
 
 // CSS Block Names
@@ -13,6 +13,7 @@ export const CSS = {
     PREVIEW_HOST: `${CSS_PREFIX}-preview-host`,
     ITEM: `${CSS_PREFIX}-item`,
     BADGE: `${CSS_PREFIX}-badge`,
+    BADGE_MORE: `${CSS_PREFIX}-badge--more`,
     BADGES: `${CSS_PREFIX}-badges`,
     ICON: `${CSS_PREFIX}-icon`,
     ICON_ACTIVE: `${CSS_PREFIX}-icon--active`,
@@ -24,6 +25,7 @@ export const CSS = {
     POPUP_LIST: `${CSS_PREFIX}-popup__list`,
     POPUP_ITEM: `${CSS_PREFIX}-popup__item`,
     POPUP_ITEM_NAME: `${CSS_PREFIX}-popup__item-name`,
+    POPUP_ITEM_ACTIONS: `${CSS_PREFIX}-popup__item-actions`,
     POPUP_ITEM_CODE: `${CSS_PREFIX}-popup__item-code`,
     POPUP_ITEM_ACTION: `${CSS_PREFIX}-popup__item-action`,
     POPUP_HEADER_ACTIONS: `${CSS_PREFIX}-popup__header-actions`,

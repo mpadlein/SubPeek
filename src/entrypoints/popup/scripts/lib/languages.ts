@@ -41,6 +41,7 @@ function getBrowserLanguage(): string {
 function getLanguageList(): LanguageItem[] {
     const browserLang = getBrowserLanguage();
     const recommendedCodes = new Set(["en", browserLang]);
+    const favorites = Settings.langCodes.get();
 
     return Object.entries(LANG_CODES).map(([code, name]) => ({
         code,
@@ -49,84 +50,68 @@ function getLanguageList(): LanguageItem[] {
         isRecommended: recommendedCodes.has(code),
         isPopular: POPULAR_LANGUAGES.includes(code),
         popularIndex: POPULAR_LANGUAGES.indexOf(code),
-        isFavorited: Settings.langCodes.get().includes(code),
-        favoritedIndex: Settings.langCodes.get().indexOf(code),
+        isFavorited: favorites.includes(code),
+        favoritedIndex: favorites.indexOf(code),
     }));
 }
 
-// sort by: favorited -> recommended -> popular -> alphabetically
-function sortLanguages(langs: LanguageItem[]) {
-    langs.sort((a, b) => {
-        // 1. Favorited Tier
-        if (a.isFavorited !== b.isFavorited) {
-            return a.isFavorited ? -1 : 1;
-        }
-        if (a.isFavorited && b.isFavorited) {
-            return a.favoritedIndex - b.favoritedIndex;
-        }
+/** Sort order: favorited -> recommended -> popular -> alphabetical. */
+function compareLanguages(a: LanguageItem, b: LanguageItem): number {
+    // 1. Favorites, in the user's order
+    if (a.isFavorited !== b.isFavorited) {
+        return a.isFavorited ? -1 : 1;
+    }
+    if (a.isFavorited && b.isFavorited) {
+        return a.favoritedIndex - b.favoritedIndex;
+    }
 
-        // 2. Recommended Tier
-        if (a.isRecommended !== b.isRecommended) {
-            return a.isRecommended ? -1 : 1;
-        }
+    // 2. Recommended
+    if (a.isRecommended !== b.isRecommended) {
+        return a.isRecommended ? -1 : 1;
+    }
 
-        // 3. Popular Tier
-        if (a.isPopular !== b.isPopular) {
-            return a.isPopular ? -1 : 1;
-        }
-        if (a.isPopular && b.isPopular) {
-            return a.popularIndex - b.popularIndex;
-        }
+    // 3. Popular, in list order
+    if (a.isPopular !== b.isPopular) {
+        return a.isPopular ? -1 : 1;
+    }
+    if (a.isPopular && b.isPopular) {
+        return a.popularIndex - b.popularIndex;
+    }
 
-        // 4. Alphabetical Fallback
-        return a.name.localeCompare(b.name);
-    });
+    // 4. Alphabetical
+    return a.name.localeCompare(b.name);
 }
 
 export function getPopularLanguages(): LanguageItem[] {
-    const popular = getLanguageList().filter((lang) => lang.isPopular);
-    sortLanguages(popular);
-    return popular;
+    return getLanguageList()
+        .filter((lang) => lang.isPopular)
+        .sort(compareLanguages);
 }
 
-export function getLanguagesFilter(filter: string = ""): LanguageItem[] {
-    let languages = getLanguageList();
-    filter = filter.toLowerCase();
-
-    languages = filter
-        ? languages.filter(
-              (lang) =>
-                  lang.name.toLowerCase().includes(filter) ||
-                  lang.nativeName.toLowerCase().includes(filter) ||
-                  lang.code.toLowerCase().includes(filter),
-          )
-        : languages;
-
-    sortLanguages(languages);
-
-    const scoredItems = languages.map((lang) => {
-        const fields = [lang.code, lang.name, lang.nativeName].map((f) =>
-            f.toLowerCase(),
-        );
-
-        let score = 0;
-        if (fields.some((f) => f.startsWith(filter))) {
-            score = 2;
-        } else if (fields.some((f) => f.includes(filter))) {
-            score = 1;
-        }
-
-        return { lang, score };
-    });
-
-    // Sort by match quality only. Array.sort is stable, so within each score
-    // bucket the favorited -> recommended -> popular -> alphabetical order
-    // established by sortLanguages() above is preserved. Adding a name
-    // tiebreak here would flatten those tiers back to plain alphabetical.
-    scoredItems.sort((a, b) => b.score - a.score);
-
-    return scoredItems.map((item) => item.lang);
+/** 2 when a field starts with the lower-cased query, 1 when one contains it. */
+function matchScore(lang: LanguageItem, query: string): number {
+    const fields = [lang.code, lang.name, lang.nativeName].map((f) =>
+        f.toLowerCase(),
+    );
+    if (fields.some((f) => f.startsWith(query))) return 2;
+    if (fields.some((f) => f.includes(query))) return 1;
+    return 0;
 }
-export function getNameOfCode(code: string): string {
+
+/**
+ * Languages whose code, name or native name contains `query`, case-insensitive.
+ * Prefix matches come first; within a match tier the usual favorited ->
+ * recommended -> popular -> alphabetical order applies.
+ */
+export function searchLanguages(query: string): LanguageItem[] {
+    const needle = query.toLowerCase();
+    return getLanguageList()
+        .map((lang) => ({ lang, score: matchScore(lang, needle) }))
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score || compareLanguages(a.lang, b.lang))
+        .map((item) => item.lang);
+}
+
+export function languageName(code: string): string {
     return LANG_CODES[code] ?? code;
 }

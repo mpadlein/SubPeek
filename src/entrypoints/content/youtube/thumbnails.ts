@@ -1,4 +1,4 @@
-import { CSS } from "../constants";
+import { CSS, CSS_PREFIX } from "../constants";
 import { metricsProxy } from "../debugging";
 import { createEmbedContainer, initEmbed } from "./ui/embed";
 
@@ -11,7 +11,7 @@ const WATCH_LINK_SELECTOR = 'a[href^="/watch?"]';
 const THUMBNAIL_IMG_SELECTOR = ":not(.ytThumbnailViewModelBlurredImage) > img";
 const THUMBNAIL_SELECTOR = `${WATCH_LINK_SELECTOR} ${THUMBNAIL_IMG_SELECTOR}`;
 
-const PROCESSED_ATTR = "data-ytbext-processed";
+const PROCESSED_ATTR = `data-${CSS_PREFIX}-processed`;
 const isProcessed = (img: HTMLImageElement) => img.hasAttribute(PROCESSED_ATTR);
 const markProcessed = (img: HTMLImageElement) =>
     img.setAttribute(PROCESSED_ATTR, "true");

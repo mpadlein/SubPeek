@@ -3,13 +3,21 @@ import { ReactiveStorage } from "./storage";
 const PREFIX = "SETTINGS:";
 const storage = new ReactiveStorage("local");
 
+/**
+ * One reactive setting: synchronous `get()` from the in-memory copy, `set()`
+ * that writes through to storage, and `subscribe()` for change notifications
+ * from any extension context. The default applies until a value is stored.
+ */
 function createAccessor<T>(key: string, defaultValue: T) {
     const fullKey = PREFIX + key;
     return {
         get: (): T => storage.get(fullKey, defaultValue),
         set: (value: T): void => storage.set(fullKey, value),
-        /** `init: true` also calls back right away with the current value. */
-        subscribe: (callback: () => void, init = false): void =>
+        /**
+         * `init: true` also calls back right away. Returns a function that
+         * removes the subscription.
+         */
+        subscribe: (callback: () => void, init = false): (() => void) =>
             storage.subscribe(fullKey, callback, init),
     };
 }

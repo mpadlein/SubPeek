@@ -50,15 +50,18 @@ export class ReactiveStorage {
         });
     }
 
-    /** `init: true` also calls `listener` right away. */
-    subscribe(key: string, listener: Listener, init = false): void {
-        let set = this.listeners.get(key);
-        if (!set) {
-            set = new Set();
-            this.listeners.set(key, set);
-        }
+    /**
+     * `init: true` also calls `listener` right away. Returns a function that
+     * removes the subscription.
+     */
+    subscribe(key: string, listener: Listener, init = false): () => void {
+        const set = this.listeners.get(key) ?? new Set<Listener>();
+        this.listeners.set(key, set);
         set.add(listener);
         if (init) listener();
+        return () => {
+            set.delete(listener);
+        };
     }
 
     private notify(key: string): void {

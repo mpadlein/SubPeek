@@ -100,7 +100,7 @@ function trackItemTemplate(
             @click=${toggle}
         >
             <span class="${CSS.POPUP_ITEM_NAME}">${track.name}</span>
-            <div class="${CSS.POPUP_ITEM}-actions">
+            <div class="${CSS.POPUP_ITEM_ACTIONS}">
                 <span class="${CSS.POPUP_ITEM_CODE}">
                     ${track.languageCode}
                 </span>

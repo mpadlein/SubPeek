@@ -1,4 +1,14 @@
 import { html, render } from "lit-html";
+import { CSS_PREFIX } from "./constants";
+
+// Dev-only metrics overlay. Production code increments `metricsProxy` freely:
+// every write re-renders the overlay, which is a no-op while it is not
+// mounted, and mountMetricsOverlay() itself is a no-op outside dev builds.
+
+const OVERLAY_ID = `${CSS_PREFIX}-debugging`;
+const CLASS_TOGGLE = `${OVERLAY_ID}-toggle`;
+const CLASS_KEY = `${OVERLAY_ID}-key`;
+const CLASS_VALUE = `${OVERLAY_ID}-value`;
 
 const metrics = {
     fetchInnerTube: 0,
@@ -31,20 +41,18 @@ function toggleOpen() {
 function metricsTemplate() {
     if (!open) {
         return html`
-            <button class="ytb-debugging-toggle" @click=${toggleOpen}>
-                dbg
-            </button>
+            <button class="${CLASS_TOGGLE}" @click=${toggleOpen}>dbg</button>
         `;
     }
 
     return html`
-        <button class="ytb-debugging-toggle" @click=${toggleOpen}>×</button>
+        <button class="${CLASS_TOGGLE}" @click=${toggleOpen}>×</button>
         <table>
             ${Object.entries(metrics).map(
                 ([key, value]) => html`
                     <tr>
-                        <td class="ytb-debugging-key">${key}</td>
-                        <td class="ytb-debugging-value">${value}</td>
+                        <td class="${CLASS_KEY}">${key}</td>
+                        <td class="${CLASS_VALUE}">${value}</td>
                     </tr>
                 `,
             )}
@@ -57,13 +65,16 @@ function updateMetrics() {
     render(metricsTemplate(), container);
 }
 
-function init() {
+/** Adds the overlay to the page; a no-op in production builds. */
+export function mountMetricsOverlay(): void {
+    if (!import.meta.env.DEV || container) return;
     container = document.createElement("div");
-    container.id = "ytb-debugging";
+    container.id = OVERLAY_ID;
     document.body.appendChild(container);
     updateMetrics();
 }
 
-if (import.meta.env.DEV) {
-    init();
+export function unmountMetricsOverlay(): void {
+    container?.remove();
+    container = null;
 }

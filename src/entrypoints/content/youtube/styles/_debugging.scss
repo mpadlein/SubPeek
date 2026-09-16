@@ -1,6 +1,6 @@
 @use "variables" as *;
 
-#ytb-debugging {
+##{$prefix}-debugging {
     position: fixed;
     top: 0;
     left: 0;
@@ -12,7 +12,7 @@
     font-weight: 400;
     border: 1px solid rgba(255, 255, 255, 0.1);
 
-    .ytb-debugging-toggle {
+    .#{$prefix}-debugging-toggle {
         background: none;
         border: none;
         color: #fff;

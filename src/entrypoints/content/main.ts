@@ -1,5 +1,8 @@
+import { Settings } from "@/common/settings";
+import { mountMetricsOverlay, unmountMetricsOverlay } from "./debugging";
 import { stopPreviews, watchPreviewsIn } from "./youtube/preview";
 import { stopThumbnails, trackThumbnailsIn } from "./youtube/thumbnails";
+import { rerenderEmbeds } from "./youtube/ui/embed";
 import { closePopup } from "./youtube/ui/popup";
 
 logger.debug("Content script loaded");
@@ -20,14 +23,21 @@ const addedNodesObserver = new MutationObserver((mutations) => {
 // ─── Lifecycle ───────────────────────────────────────────────────────
 //
 // start() and stop() are mirror images, driven by Settings.enabled. Both are
-// idempotent so the storage listener can call them freely.
+// idempotent so the storage listener can call them freely. No module touches
+// the page or subscribes to settings at import time; it all happens here, so
+// stop() can undo all of it.
 
 let running = false;
+let unsubscribeFavorites = () => {};
 
 export function start(): void {
     if (running) return;
     running = true;
 
+    mountMetricsOverlay();
+    // Badges show only favorite languages, so every embed redraws when the
+    // list changes (in the settings popup or from another tab).
+    unsubscribeFavorites = Settings.langCodes.subscribe(rerenderEmbeds);
     addedNodesObserver.observe(document.documentElement, {
         childList: true,
         subtree: true,
@@ -47,7 +57,9 @@ export function stop(): void {
     running = false;
 
     addedNodesObserver.disconnect();
+    unsubscribeFavorites();
     closePopup();
     stopPreviews();
     stopThumbnails();
+    unmountMetricsOverlay();
 }

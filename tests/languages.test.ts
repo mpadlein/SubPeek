@@ -37,10 +37,10 @@ describe("getPopularLanguages", () => {
     });
 });
 
-describe("getLanguagesFilter", () => {
+describe("searchLanguages", () => {
     it("matches on name, native name and code, prefix matches first", async () => {
-        const { getLanguagesFilter } = await load([]);
-        const results = getLanguagesFilter("ja");
+        const { searchLanguages } = await load([]);
+        const results = searchLanguages("ja");
 
         expect(results[0]?.code).toBe("ja");
         for (const lang of results) {
@@ -52,23 +52,23 @@ describe("getLanguagesFilter", () => {
     });
 
     it("is case-insensitive and keeps favorites first within a match tier", async () => {
-        const { getLanguagesFilter } = await load(["pt"]);
-        const codes = getLanguagesFilter("PORT").map((l) => l.code);
+        const { searchLanguages } = await load(["pt"]);
+        const codes = searchLanguages("PORT").map((l) => l.code);
 
         expect(codes[0]).toBe("pt");
         expect(codes).toContain("pt-BR");
     });
 
     it("returns nothing for a query that matches no language", async () => {
-        const { getLanguagesFilter } = await load([]);
-        expect(getLanguagesFilter("zzzz")).toEqual([]);
+        const { searchLanguages } = await load([]);
+        expect(searchLanguages("zzzz")).toEqual([]);
     });
 });
 
-describe("getNameOfCode", () => {
+describe("languageName", () => {
     it("falls back to the code itself for unknown languages", async () => {
-        const { getNameOfCode } = await load([]);
-        expect(getNameOfCode("fr")).toBe("French");
-        expect(getNameOfCode("xx-XX")).toBe("xx-XX");
+        const { languageName } = await load([]);
+        expect(languageName("fr")).toBe("French");
+        expect(languageName("xx-XX")).toBe("xx-XX");
     });
 });
