@@ -98,6 +98,6 @@ Prettier with 4-space indent and `prettier-plugin-organize-imports` (`.prettierr
 
 - WXT auto-imports: `defineContentScript`, `defineBackground`, `browser` and everything exported from `src/utils/` (notably `logger`) are available without imports
 - `logger` (`utils/logger.ts`) wraps `console.*` with a `[SubPeek]` prefix; use it instead of `console`
-- Cache TTL is a fixed 1 hour (`CACHE_TTL_SECONDS`); cache timestamps are in seconds (`Date.now() / 1000`), not milliseconds
+- Cache TTL is a fixed 30 minutes (`CACHE_TTL_SECONDS`); cache timestamps are in seconds (`Date.now() / 1000`), not milliseconds
 - Settings are reactive: components subscribe and re-render, they never poll storage
 - Use ASCII hyphens, not en/em dashes, in comments and docs
