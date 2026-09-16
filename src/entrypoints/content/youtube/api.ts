@@ -4,7 +4,7 @@ import type { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
 import pLimit from "p-limit";
 import { metricsProxy } from "../debugging";
 import { extractVideoId } from "./utils";
-import { getYtcfg } from "./ytcfg";
+import { balancedObject, getYtcfg } from "./ytcfg";
 
 interface PlayerResponse {
     playabilityStatus?: { status?: string };
@@ -13,6 +13,9 @@ interface PlayerResponse {
 }
 
 const fetchLimit = pLimit(4);
+
+/** Matches up to and including the opening brace of the watch-page player JSON. */
+const PLAYER_RESPONSE_ASSIGNMENT = /var ytInitialPlayerResponse\s*=\s*\{/;
 
 /**
  * Suffix of `audioTrack.id` for the video's original audio. Observed values:
@@ -128,15 +131,18 @@ async function fetchPlayerResponseFallback(
         }
         const html = await res.text();
 
-        const regex = /var ytInitialPlayerResponse\s*=\s*(\{.+?\});/s;
-        const match = html.match(regex);
+        // A lazy regex up to the first "};" would stop inside a string, e.g. a
+        // description containing code; scan for the balanced object instead.
+        const match = PLAYER_RESPONSE_ASSIGNMENT.exec(html);
+        const literal =
+            match && balancedObject(html, match.index + match[0].length - 1);
 
-        if (!match) {
+        if (!literal) {
             throw new Error("Could not find ytInitialPlayerResponse");
         }
 
         try {
-            return JSON.parse(match[1] as string);
+            return JSON.parse(literal);
         } catch (error) {
             throw new Error("Could not parse ytInitialPlayerResponse:", {
                 cause: error,

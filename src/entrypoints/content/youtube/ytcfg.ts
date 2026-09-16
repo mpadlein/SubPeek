@@ -70,7 +70,11 @@ function readYtcfg(): YtcfgSnapshot | null {
     };
 }
 
-function balancedObject(text: string, start: number): string | null {
+/**
+ * Returns the `{...}` literal starting at `text[start]`, skipping braces inside
+ * strings. Assumes strict JSON (double-quoted strings, backslash escapes).
+ */
+export function balancedObject(text: string, start: number): string | null {
     let depth = 0;
     let inString = false;
     let escaped = false;
