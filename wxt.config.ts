@@ -26,7 +26,7 @@ export default defineConfig({
         ...(browser === "firefox" && {
             browser_specific_settings: {
                 gecko: {
-                    id: "subpeek@mpadlein",
+                    id: "subpeek2@mpadlein",
                     strict_min_version: "110.0",
                     data_collection_permissions: { required: ["none"] },
                 },
