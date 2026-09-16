@@ -1,7 +1,13 @@
+type Listener = () => void;
+
 class BrowserStorageSync {
     private storage: Map<string, any> = new Map();
     private storageApi: Browser.storage.StorageArea;
-    private eventTarget: EventTarget = new EventTarget();
+    // A plain listener map, not an EventTarget: a `new EventTarget()` created
+    // inside a Firefox content script never delivers events to its listeners
+    // (dispatchEvent returns true, nothing runs), so subscribers silently
+    // stopped following changes there while the cache below still updated.
+    private listeners: Map<string, Set<Listener>> = new Map();
 
     constructor(storageApi: Browser.storage.StorageArea) {
         this.storageApi = storageApi;
@@ -30,9 +36,15 @@ class BrowserStorageSync {
                 } else {
                     this.storage.set(key, change.newValue);
                 }
-                this.eventTarget.dispatchEvent(
-                    new CustomEvent(key, { detail: change }),
-                );
+                this.listeners.get(key)?.forEach((listener) => {
+                    // One failing subscriber must not starve the others, as
+                    // EventTarget guaranteed.
+                    try {
+                        listener();
+                    } catch (error) {
+                        logger.error("Storage listener failed:", key, error);
+                    }
+                });
             }
         });
     }
@@ -60,8 +72,13 @@ class BrowserStorageSync {
         });
     }
 
-    public subscribe(key: string, callback: () => void, init: boolean = false) {
-        this.eventTarget.addEventListener(key, callback);
+    public subscribe(key: string, callback: Listener, init: boolean = false) {
+        let set = this.listeners.get(key);
+        if (!set) {
+            set = new Set();
+            this.listeners.set(key, set);
+        }
+        set.add(callback);
         init && callback();
     }
 }
