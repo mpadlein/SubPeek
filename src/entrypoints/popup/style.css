@@ -348,6 +348,10 @@ body {
     color: var(--color-primary);
 }
 
+.language-dropdown li.active {
+    background: var(--bg-card-hover);
+}
+
 .language-dropdown li.no-results {
     color: var(--text-muted);
     cursor: default;

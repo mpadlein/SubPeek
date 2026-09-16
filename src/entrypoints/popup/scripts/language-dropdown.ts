@@ -3,20 +3,83 @@ import { html, nothing } from "lit-html";
 import { getLanguagesFilter, getPopularLanguages } from "./lib/languages";
 import { type LanguageItem } from "./types";
 
+const SEARCH_DISPLAY_LIMIT = 10;
+
 export function createLanguageDropdown(rerender: () => void) {
     let searchText = "";
     let dropdownOpen = false;
     let expanded = false;
+    // Keyboard-highlighted row. With a search term the first match is always
+    // highlighted so Enter/Tab picks it; with a blank input nothing is until
+    // the user arrows down.
+    let activeIndex = -1;
+
+    function visibleLanguages(): LanguageItem[] {
+        if (searchText.length > 0) {
+            return getLanguagesFilter(searchText).slice(
+                0,
+                SEARCH_DISPLAY_LIMIT,
+            );
+        }
+        return getPopularLanguages();
+    }
+
+    function resetActiveIndex() {
+        activeIndex = searchText.length > 0 ? 0 : -1;
+    }
 
     function handleInput(e: InputEvent) {
         searchText = (e.target as HTMLInputElement).value;
         dropdownOpen = true;
+        resetActiveIndex();
         rerender();
     }
 
     function handleFocus() {
         dropdownOpen = true;
         rerender();
+    }
+
+    function handleKeydown(e: KeyboardEvent) {
+        switch (e.key) {
+            case "ArrowDown":
+            case "ArrowUp": {
+                e.preventDefault();
+                const count = visibleLanguages().length;
+                if (count === 0) return;
+                const step = e.key === "ArrowDown" ? 1 : -1;
+                if (!dropdownOpen) {
+                    dropdownOpen = true;
+                    resetActiveIndex();
+                }
+                activeIndex = (activeIndex + step + count) % count;
+                rerender();
+                document
+                    .querySelector(".language-dropdown li.active")
+                    ?.scrollIntoView({ block: "nearest" });
+                return;
+            }
+            case "Enter":
+            case "Tab": {
+                if (!dropdownOpen || activeIndex < 0) return;
+                const lang = visibleLanguages()[activeIndex];
+                if (!lang) return;
+                // Tab would otherwise move focus out of the input; keep it
+                // here so several languages can be added in a row.
+                e.preventDefault();
+                handleSelect(lang.code);
+                return;
+            }
+            case "Escape": {
+                if (!dropdownOpen) return;
+                e.preventDefault();
+                dropdownOpen = false;
+                searchText = "";
+                resetActiveIndex();
+                rerender();
+                return;
+            }
+        }
     }
 
     function handleExpand() {
@@ -31,15 +94,17 @@ export function createLanguageDropdown(rerender: () => void) {
         Settings.langCodes.add(code);
         searchText = "";
         dropdownOpen = false;
+        resetActiveIndex();
         // add() no-ops for an already-favorited code, so no storage event
         // arrives to re-render; render the state change explicitly.
         rerender();
     }
 
-    function dropdownItemTemplate(lang: LanguageItem) {
+    function dropdownItemTemplate(lang: LanguageItem, index: number) {
         const classes = [
             lang.isFavorited ? "selected" : "",
             lang.isRecommended ? "recommended" : "",
+            index === activeIndex ? "active" : "",
         ]
             .filter(Boolean)
             .join(" ");
@@ -71,6 +136,7 @@ export function createLanguageDropdown(rerender: () => void) {
             dropdownOpen = false;
             expanded = false;
             searchText = "";
+            resetActiveIndex();
             rerender();
         }
     });
@@ -94,13 +160,7 @@ export function createLanguageDropdown(rerender: () => void) {
             `;
         }
 
-        let languages: LanguageItem[] = [];
-        if (searchText.length > 0) {
-            languages = getLanguagesFilter(searchText);
-        } else {
-            languages = getPopularLanguages();
-        }
-        const displayLimit = searchText ? 10 : languages.length;
+        const languages = visibleLanguages();
 
         return html`
             <div class="language-selector">
@@ -128,6 +188,7 @@ export function createLanguageDropdown(rerender: () => void) {
                         .value=${searchText}
                         @input=${handleInput}
                         @focus=${handleFocus}
+                        @keydown=${handleKeydown}
                     />
                 </div>
                 ${dropdownOpen
@@ -137,9 +198,7 @@ export function createLanguageDropdown(rerender: () => void) {
                                   ? html`<li class="no-results">
                                         No languages found
                                     </li>`
-                                  : languages
-                                        .slice(0, displayLimit)
-                                        .map(dropdownItemTemplate)}
+                                  : languages.map(dropdownItemTemplate)}
                           </ul>
                       `
                     : nothing}
