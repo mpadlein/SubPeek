@@ -59,7 +59,7 @@ Unit tests: `npm test` (Vitest, `tests/`). Browser-level checks: the scripts in 
 - `initEmbed()` has three states: `loading` (spinner), `ready` (badges), `unavailable` (renders nothing at all). It filters out auto-generated captions and the original audio track before rendering, so badges only reflect human captions and dubs.
 - Badges are shown only for favorite languages, followed by a `+N` count of the rest. Tooltips are pure CSS (`.ytbext-tooltip` / `.ytbext-tooltip__text`).
 - Each embed container listens for the `ytbext:render` DOM event; `Settings.langCodes.subscribe()` dispatches it to every container when favorites change.
-- `showTrackPopup()` toggles: clicking the badge that opened the popup closes it, clicking another badge switches to it. It also closes on outside click, Escape and scroll. Only one `.ytbext-popup` exists at a time, appended to `document.body`; `closePopup()` is exported for `stop()`.
+- `showTrackPopup()` toggles: clicking the badge that opened the popup closes it, clicking another badge switches to it. It also closes on outside click, Escape and scroll; those three listeners are registered when a popup opens and removed when it closes, so `stop()` leaves none behind. Only one `.ytbext-popup` exists at a time, appended to `document.body` and tracked in `activePopup`; `closePopup()` is exported for `stop()`.
 - The popup header has a power button next to the gear. It only sets `Settings.enabled = false` and lets the storage listener tear everything (including the popup) down. It is deliberately an action button, not a switch: in-page UI exists only while the extension is on, so there is no in-page way back; the tooltip points to the toolbar icon.
 
 ### Key modules
@@ -71,7 +71,7 @@ Unit tests: `npm test` (Vitest, `tests/`). Browser-level checks: the scripts in 
 - **`common/cache.ts`**: `VideoCache` singleton built on `IDBStore`, keyed by `videoId` with a `timestamp` index. Used only by the background script
 - **`content/constants.ts`**: BEM class names (`CSS`) and custom DOM event names (`EVENT`)
 - **`common/icons.ts`**: SVG icon path data (`ICON_*`) plus the `svgIconTemplate()` / `logoTemplate()` lit-html helpers, shared by the content script and the settings popup
-- **`content/youtube/video-url.ts`**: `extractVideoId()`; **`content/youtube/tracks.ts`**: `sortTrackByFavorite()` (favorite languages first, in favorites order)
+- **`content/youtube/video-url.ts`**: `extractVideoId()`; **`content/youtube/tracks.ts`**: `sortByFavorite()`, a pure copy-and-sort (favorite languages first, in favorites order) applied at render time so badges follow every favorites change
 - **`content/debugging.ts`**: dev-only (`import.meta.env.DEV`) metrics overlay (fetch counts, cache hits, rate limits). `metricsProxy` is a `Proxy` that re-renders on every write; production code increments it freely and it is a no-op when the overlay is not mounted
 
 ### Content script <-> background communication

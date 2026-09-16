@@ -5,7 +5,7 @@ import { html, nothing, render, type TemplateResult } from "lit-html";
 import { classMap } from "lit-html/directives/class-map.js";
 import { CSS, EVENT } from "../../constants";
 import { resolveVideoInfo } from "../api";
-import { sortTrackByFavorite } from "../tracks";
+import { sortByFavorite } from "../tracks";
 import { showTrackPopup } from "./popup";
 
 function badgeTemplate(track: TrackItem): TemplateResult {
@@ -27,8 +27,9 @@ function badgeListTemplate(
         return html`<div class="${CSS.LOADING_SPINNER}"></div>`;
     }
 
-    const favoriteTracks = tracks.filter((t) =>
-        favoriteLangCodes.includes(t.languageCode),
+    const favoriteTracks = sortByFavorite(
+        tracks.filter((t) => favoriteLangCodes.includes(t.languageCode)),
+        favoriteLangCodes,
     );
     const remaining = tracks.length - favoriteTracks.length;
 
@@ -60,11 +61,9 @@ function sectionTemplate(
     const open = (e: Event) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!tracks) return;
-        const target = (e.currentTarget as HTMLElement).closest(
-            `.${CSS.ITEM}`,
-        ) as HTMLElement;
-        showTrackPopup(target, type, tracks);
+        const item = e.currentTarget;
+        if (!tracks || !(item instanceof HTMLElement)) return;
+        showTrackPopup(item, type, tracks);
     };
 
     const handleKeydown = (e: KeyboardEvent) => {
@@ -170,8 +169,6 @@ export async function initEmbed(
         if (data) {
             const captions = data.captions.filter((t) => !t.auto);
             const audioTracks = data.audioTracks.filter((t) => !t.origin);
-            sortTrackByFavorite(captions);
-            sortTrackByFavorite(audioTracks);
             state = { kind: "ready", captions, audioTracks };
         } else {
             state = { kind: "unavailable" };
@@ -188,6 +185,7 @@ export async function initEmbed(
     updateView();
     container.addEventListener(EVENT.RENDER, updateView);
 }
+
 function handleUserLangCodesUpdate() {
     document.querySelectorAll(`.${CSS.CONTAINER}`).forEach((el) => {
         el.dispatchEvent(new CustomEvent(EVENT.RENDER));

@@ -242,7 +242,7 @@ const inFlight = new Map<string, Promise<VideoInfo | null>>();
 export function resolveVideoInfo(url: string): Promise<VideoInfo | null> {
     const videoId = extractVideoId(url);
     if (!videoId) {
-        logger.warn("Could not extract video ID from URL: " + url);
+        logger.debug("No video id in URL, skipping: " + url);
         return Promise.resolve(null);
     }
 

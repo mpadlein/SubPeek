@@ -1,0 +1,128 @@
+import type { VideoInfo } from "@/common/types";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fakeBrowser } from "wxt/testing/fake-browser";
+
+const mocks = vi.hoisted(() => ({
+    resolveVideoInfo: vi.fn<() => Promise<VideoInfo | null>>(),
+}));
+vi.mock("@/entrypoints/content/youtube/api", () => ({
+    resolveVideoInfo: mocks.resolveVideoInfo,
+}));
+
+const info: VideoInfo = {
+    captions: [
+        { languageCode: "en", name: "English", auto: false },
+        { languageCode: "fr", name: "French", auto: false },
+        { languageCode: "de", name: "German", auto: false },
+        { languageCode: "es", name: "Spanish (auto)", auto: true },
+    ],
+    audioTracks: [
+        { languageCode: "en", name: "English original", origin: true },
+        { languageCode: "ja", name: "Japanese", origin: false },
+    ],
+};
+
+const VIDEO_URL = "https://www.youtube.com/watch?v=abc";
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+// Fresh modules per test: the embed module subscribes to the favorites at
+// import time, and the settings wrapper caches storage in memory.
+async function loadEmbed(favorites: string[]) {
+    fakeBrowser.reset();
+    await fakeBrowser.storage.local.set({ "SETTINGS:langCodes": favorites });
+    document.body.innerHTML = "";
+    vi.resetModules();
+    const { browserStorageLocalSV } = await import("@/common/storage");
+    await browserStorageLocalSV.ready();
+    return import("@/entrypoints/content/youtube/ui/embed");
+}
+
+async function mount(favorites: string[]) {
+    const { createEmbedContainer, initEmbed } = await loadEmbed(favorites);
+    const container = createEmbedContainer(VIDEO_URL);
+    document.body.appendChild(container);
+    await initEmbed(container, VIDEO_URL);
+    return container;
+}
+
+/** The label of every badge, without the tooltip text nested inside it. */
+function badgeLabels(container: HTMLElement): string[] {
+    return Array.from(container.querySelectorAll(".ytbext-badge")).map((el) =>
+        Array.from(el.childNodes)
+            .filter((node) => node.nodeType === Node.TEXT_NODE)
+            .map((node) => node.textContent)
+            .join("")
+            .trim(),
+    );
+}
+
+beforeEach(() => {
+    mocks.resolveVideoInfo.mockReset().mockResolvedValue(info);
+});
+
+describe("initEmbed", () => {
+    it("shows favorite tracks in favorites order plus a count of the rest", async () => {
+        const container = await mount(["fr", "en"]);
+
+        // Captions: fr, en favorites out of en/fr/de (the auto track is
+        // dropped). Audio: the original is dropped and ja is no favorite,
+        // so that section shows no badges at all.
+        expect(badgeLabels(container)).toEqual(["FR", "EN", "+1"]);
+    });
+
+    it("re-sorts the badges when the favorites order changes elsewhere", async () => {
+        const container = await mount(["fr", "en"]);
+
+        await fakeBrowser.storage.local.set({
+            "SETTINGS:langCodes": ["en", "fr"],
+        });
+        await flush();
+
+        expect(badgeLabels(container)).toEqual(["EN", "FR", "+1"]);
+    });
+
+    it("promotes a newly favorited track", async () => {
+        const container = await mount([]);
+        expect(badgeLabels(container)).toEqual([]);
+
+        await fakeBrowser.storage.local.set({ "SETTINGS:langCodes": ["ja"] });
+        await flush();
+
+        expect(badgeLabels(container)).toEqual(["JA"]);
+    });
+
+    it("renders nothing when the lookup fails", async () => {
+        mocks.resolveVideoInfo.mockResolvedValueOnce(null);
+
+        const container = await mount(["en"]);
+
+        expect(container.childElementCount).toBe(0);
+    });
+
+    it("draws nothing into a container removed while the lookup was pending", async () => {
+        const { createEmbedContainer, initEmbed } = await loadEmbed(["en"]);
+        let resolveLookup!: (value: VideoInfo) => void;
+        mocks.resolveVideoInfo.mockReturnValueOnce(
+            new Promise((resolve) => (resolveLookup = resolve)),
+        );
+        const container = createEmbedContainer(VIDEO_URL);
+        document.body.appendChild(container);
+        const done = initEmbed(container, VIDEO_URL);
+
+        container.remove();
+        resolveLookup(info);
+        await done;
+
+        expect(container.childElementCount).toBe(0);
+    });
+
+    it("opens the track popup for the clicked section", async () => {
+        const container = await mount(["en"]);
+
+        container.querySelector<HTMLElement>(".ytbext-item")!.click();
+
+        expect(
+            document.querySelector(".ytbext-popup")?.getAttribute("aria-label"),
+        ).toBe("Subtitle languages");
+    });
+});

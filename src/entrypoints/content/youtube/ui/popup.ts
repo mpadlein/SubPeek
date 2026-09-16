@@ -14,7 +14,7 @@ import { messaging } from "@/common/messaging";
 import { Settings } from "@/common/settings";
 import type { TrackItem } from "@/common/types";
 import { CSS } from "../../constants";
-import { sortTrackByFavorite } from "../tracks";
+import { sortByFavorite } from "../tracks";
 
 // ─── Templates ──────────────────────────────────────────────────────
 
@@ -151,6 +151,11 @@ function popupTemplate(
 
 // ─── Positioning ────────────────────────────────────────────────────
 
+/** Space kept between the popup and the right edge of the viewport. */
+const VIEWPORT_MARGIN = 24;
+/** Gap between the badge and the popup. */
+const POPUP_GAP = 4;
+
 function positionPopup(root: HTMLElement, parent: HTMLElement): void {
     const rect = parent.getBoundingClientRect();
     const isBottomHalf = rect.top > window.innerHeight / 2;
@@ -158,20 +163,22 @@ function positionPopup(root: HTMLElement, parent: HTMLElement): void {
     root.classList.add(isBottomHalf ? CSS.MOD_BOTTOM : CSS.MOD_TOP);
 
     let left = rect.left;
-    const rightOverflow = left + root.clientWidth - window.innerWidth + 24;
+    const rightOverflow =
+        left + root.clientWidth - window.innerWidth + VIEWPORT_MARGIN;
     if (rightOverflow > 0) left -= rightOverflow;
     root.style.left = `${left}px`;
 
     if (isBottomHalf) {
-        root.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+        root.style.bottom = `${window.innerHeight - rect.top + POPUP_GAP}px`;
     } else {
-        root.style.top = `${rect.bottom + 4}px`;
+        root.style.top = `${rect.bottom + POPUP_GAP}px`;
     }
 }
 
 // ─── Public API ─────────────────────────────────────────────────────
 
-/** The badge that opened the currently visible popup, if any. */
+/** The open popup and the badge that opened it; both null while closed. */
+let activePopup: HTMLElement | null = null;
 let activeSource: HTMLElement | null = null;
 
 export function showTrackPopup(
@@ -179,21 +186,15 @@ export function showTrackPopup(
     type: "cc" | "audio",
     tracks: TrackItem[],
 ): void {
-    const existing = document.querySelector(`.${CSS.POPUP}`);
-    const wasSameSource = activeSource === parent;
-
-    if (existing) {
-        existing.remove();
-        activeSource = null;
-    }
-
     // Re-clicking the badge that opened the popup toggles it closed; clicking a
     // different badge switches straight to that one rather than just closing.
-    if (wasSameSource) return;
+    const wasSameSource = activeSource === parent;
+    closePopup();
+    if (wasSameSource || tracks.length === 0) return;
 
-    if (tracks.length === 0) return;
-
-    sortTrackByFavorite(tracks);
+    // Sorted once per opening, so rows do not jump around while favorites
+    // are toggled from inside the popup.
+    const sortedTracks = sortByFavorite(tracks, Settings.langCodes.get());
 
     const root = document.createElement("div");
     root.className = CSS.POPUP;
@@ -208,7 +209,7 @@ export function showTrackPopup(
     };
 
     const renderContent = () => {
-        render(popupTemplate(type, tracks, toggleFavorite), root);
+        render(popupTemplate(type, sortedTracks, toggleFavorite), root);
     };
 
     const toggleFavorite = (languageCode: string) => {
@@ -227,31 +228,37 @@ export function showTrackPopup(
     document.body.appendChild(root);
     positionPopup(root, parent);
     root.style.visibility = "visible";
+
+    activePopup = root;
     activeSource = parent;
+    // Registered only while a popup is open, so stop() leaves nothing behind.
+    document.addEventListener("click", closePopupOutside);
+    document.addEventListener("keydown", closePopupOnEscape);
+    window.addEventListener("scroll", closePopupOutside, true);
 }
 
-// ─── Global listeners to close popups ───────────────────────────────
+// ─── Closing ────────────────────────────────────────────────────────
 
 export function closePopup(): void {
-    document.querySelector(`.${CSS.POPUP}`)?.remove();
+    if (!activePopup) return;
+    activePopup.remove();
+    activePopup = null;
     activeSource = null;
+    document.removeEventListener("click", closePopupOutside);
+    document.removeEventListener("keydown", closePopupOnEscape);
+    window.removeEventListener("scroll", closePopupOutside, true);
 }
 
 function closePopupOutside(event: Event): void {
-    const popup = document.querySelector(`.${CSS.POPUP}`);
-    if (popup && !popup.contains(event.target as Node)) {
-        closePopup();
+    if (event.target instanceof Node && activePopup?.contains(event.target)) {
+        return;
     }
+    closePopup();
 }
 
 function closePopupOnEscape(event: KeyboardEvent): void {
     if (event.key !== "Escape") return;
     const source = activeSource;
-    if (!document.querySelector(`.${CSS.POPUP}`)) return;
     closePopup();
     source?.focus();
 }
-
-document.addEventListener("click", closePopupOutside);
-document.addEventListener("keydown", closePopupOnEscape);
-window.addEventListener("scroll", closePopupOutside, true);

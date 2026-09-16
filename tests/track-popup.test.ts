@@ -1,0 +1,130 @@
+import type { TrackItem } from "@/common/types";
+import { describe, expect, it, vi } from "vitest";
+import { fakeBrowser } from "wxt/testing/fake-browser";
+
+const tracks: TrackItem[] = [
+    { languageCode: "de", name: "German", auto: false },
+    { languageCode: "en", name: "English", auto: false },
+    { languageCode: "fr", name: "French", auto: false },
+];
+
+async function load(favorites = ["fr"]) {
+    fakeBrowser.reset();
+    await fakeBrowser.storage.local.set({ "SETTINGS:langCodes": favorites });
+    document.body.innerHTML =
+        '<div id="a" tabindex="0"></div><div id="b" tabindex="0"></div>';
+    vi.resetModules();
+    const { browserStorageLocalSV } = await import("@/common/storage");
+    await browserStorageLocalSV.ready();
+    const { Settings } = await import("@/common/settings");
+    const { closePopup, showTrackPopup } =
+        await import("@/entrypoints/content/youtube/ui/popup");
+    return {
+        Settings,
+        closePopup,
+        showTrackPopup,
+        a: document.getElementById("a")!,
+        b: document.getElementById("b")!,
+    };
+}
+
+const popup = () => document.querySelector<HTMLElement>(".ytbext-popup");
+const rowCodes = () =>
+    Array.from(document.querySelectorAll(".ytbext-popup__item-code")).map(
+        (el) => el.textContent?.trim(),
+    );
+const row = (code: string) =>
+    document.querySelector<HTMLElement>(
+        `.ytbext-popup__item[data-language-code="${code}"]`,
+    )!;
+
+describe("showTrackPopup", () => {
+    it("lists every track with the favorites first", async () => {
+        const { showTrackPopup, a } = await load(["fr"]);
+
+        showTrackPopup(a, "cc", tracks);
+
+        expect(popup()).not.toBeNull();
+        expect(rowCodes()).toEqual(["fr", "de", "en"]);
+        expect(row("fr").classList.contains("is-favorite")).toBe(true);
+        expect(row("de").classList.contains("is-favorite")).toBe(false);
+    });
+
+    it("toggles closed on the same badge and switches on another", async () => {
+        const { showTrackPopup, a, b } = await load();
+
+        showTrackPopup(a, "cc", tracks);
+        showTrackPopup(a, "cc", tracks);
+        expect(popup()).toBeNull();
+
+        showTrackPopup(a, "cc", tracks);
+        showTrackPopup(b, "audio", tracks);
+        expect(document.querySelectorAll(".ytbext-popup")).toHaveLength(1);
+        expect(popup()?.getAttribute("aria-label")).toBe("Audio languages");
+
+        // b is now the source, so clicking b again closes.
+        showTrackPopup(b, "audio", tracks);
+        expect(popup()).toBeNull();
+    });
+
+    it("toggles a favorite from a row without reordering the open list", async () => {
+        const { Settings, showTrackPopup, a } = await load(["fr"]);
+        showTrackPopup(a, "cc", tracks);
+
+        row("de")
+            .querySelector<HTMLButtonElement>(".ytbext-popup__item-action")!
+            .click();
+
+        expect(Settings.langCodes.get()).toEqual(["fr", "de"]);
+        expect(row("de").classList.contains("is-favorite")).toBe(true);
+        expect(rowCodes()).toEqual(["fr", "de", "en"]);
+        expect(popup()).not.toBeNull();
+    });
+
+    it("closes on Escape and hands focus back to the badge", async () => {
+        const { showTrackPopup, a } = await load();
+        showTrackPopup(a, "cc", tracks);
+
+        document.dispatchEvent(
+            new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+        );
+
+        expect(popup()).toBeNull();
+        expect(document.activeElement).toBe(a);
+    });
+
+    it("closes on an outside click or a scroll, not on a click inside", async () => {
+        const { showTrackPopup, a } = await load();
+
+        showTrackPopup(a, "cc", tracks);
+        row("en").click();
+        expect(popup()).not.toBeNull();
+
+        document.body.click();
+        expect(popup()).toBeNull();
+
+        showTrackPopup(a, "cc", tracks);
+        window.dispatchEvent(new Event("scroll"));
+        expect(popup()).toBeNull();
+    });
+
+    it("registers its document listeners only while open", async () => {
+        const { showTrackPopup, closePopup, a } = await load();
+        const add = vi.spyOn(document, "addEventListener");
+        const remove = vi.spyOn(document, "removeEventListener");
+        const removeFromWindow = vi.spyOn(window, "removeEventListener");
+
+        showTrackPopup(a, "cc", tracks);
+        expect(add).toHaveBeenCalledWith("click", expect.any(Function));
+        expect(add).toHaveBeenCalledWith("keydown", expect.any(Function));
+
+        closePopup();
+        expect(remove).toHaveBeenCalledWith("click", expect.any(Function));
+        expect(remove).toHaveBeenCalledWith("keydown", expect.any(Function));
+        expect(removeFromWindow).toHaveBeenCalledWith(
+            "scroll",
+            expect.any(Function),
+            true,
+        );
+    });
+});

@@ -30,6 +30,15 @@ export class IDBStore<T> {
                 reject(request.error);
             };
 
+            // Another tab still holds an older version open, so the upgrade
+            // cannot proceed; fail instead of leaving every caller pending.
+            request.onblocked = () => {
+                this.dbPromise = null;
+                reject(
+                    new Error("IndexedDB open blocked by another connection"),
+                );
+            };
+
             request.onsuccess = () => {
                 this.db = request.result;
                 this.db.onclose = () => {
