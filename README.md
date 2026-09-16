@@ -82,11 +82,13 @@ See `CLAUDE.md` for a fuller architecture walkthrough.
 ```
 src/
   entrypoints/
-    content/            # Content script: thumbnail detection + badge UI
-    background.ts       # Service worker: IndexedDB cache
+    content/            # Content script
+      main.ts           #   lifecycle (start/stop) + DOM observer
+      youtube/          #   api.ts, ytcfg.ts, thumbnails.ts, preview.ts, ui/, styles/
+    background.ts       # Service worker: IndexedDB cache + message handlers
     popup/              # Settings UI (favorite languages)
-  common/               # Shared storage, settings, cache, types
-  utils/                # Logger
+  common/               # Shared storage, settings, cache, messaging, icons, types
+  utils/                # Logger (auto-imported by WXT)
 public/
   icon/                 # Extension icons
   fonts/                # Bundled Inter font (SIL OFL 1.1)

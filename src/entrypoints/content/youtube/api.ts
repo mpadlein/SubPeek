@@ -4,7 +4,7 @@ import { Settings } from "@/common/settings";
 import type { AudioTrack, CaptionTrack, VideoInfo } from "@/common/types";
 import pLimit from "p-limit";
 import { metricsProxy } from "../debugging";
-import { extractVideoId } from "./utils";
+import { extractVideoId } from "./video-url";
 import { balancedObject, getYtcfg } from "./ytcfg";
 
 interface PlayerResponse {

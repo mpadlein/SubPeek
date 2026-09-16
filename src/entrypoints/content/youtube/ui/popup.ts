@@ -1,19 +1,20 @@
 import { html, render, type TemplateResult } from "lit-html";
 import { classMap } from "lit-html/directives/class-map.js";
 
-import { messaging } from "@/common/messaging";
-import { Settings } from "@/common/settings";
-import type { TrackItem } from "@/common/types";
 import {
-    CSS,
     ICON_AUDIO,
     ICON_CC,
     ICON_HEART,
     ICON_POWER,
     ICON_SETTINGS,
-} from "../../constants";
-import { sortTrackByFavorite } from "../utils";
-import { logoTemplate, svgIconTemplate } from "./utils";
+    logoTemplate,
+    svgIconTemplate,
+} from "@/common/icons";
+import { messaging } from "@/common/messaging";
+import { Settings } from "@/common/settings";
+import type { TrackItem } from "@/common/types";
+import { CSS } from "../../constants";
+import { sortTrackByFavorite } from "../tracks";
 
 // ─── Templates ──────────────────────────────────────────────────────
 

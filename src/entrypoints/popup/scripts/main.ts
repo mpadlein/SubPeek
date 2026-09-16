@@ -1,6 +1,6 @@
+import { ICON_HEART } from "@/common/icons";
 import { Settings } from "@/common/settings";
 import { browserStorageLocalSV } from "@/common/storage";
-import { ICON_HEART } from "@/entrypoints/content/constants";
 import { html, render } from "lit-html";
 import { createFavoritedLanguages } from "./favorited-languages";
 import { createLanguageDropdown } from "./language-dropdown";

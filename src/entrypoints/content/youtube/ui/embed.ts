@@ -1,13 +1,12 @@
+import { ICON_AUDIO, ICON_CC, svgIconTemplate } from "@/common/icons";
 import { Settings } from "@/common/settings";
-import type { AudioTrack, CaptionTrack } from "@/common/types";
-import { type TrackItem } from "@/common/types";
+import type { AudioTrack, CaptionTrack, TrackItem } from "@/common/types";
 import { html, nothing, render, type TemplateResult } from "lit-html";
 import { classMap } from "lit-html/directives/class-map.js";
-import { CSS, EVENT, ICON_AUDIO, ICON_CC } from "../../constants";
+import { CSS, EVENT } from "../../constants";
 import { resolveVideoInfo } from "../api";
-import { sortTrackByFavorite } from "../utils";
+import { sortTrackByFavorite } from "../tracks";
 import { showTrackPopup } from "./popup";
-import { svgIconTemplate } from "./utils";
 
 function badgeTemplate(track: TrackItem): TemplateResult {
     return html`
@@ -113,6 +112,24 @@ function embedTemplate(
 }
 
 // ─── Public API ──────────────────────────────────────────────────────
+
+/** The element the badges render into; `data-href` records which video. */
+export function createEmbedContainer(videoUrl: string): HTMLDivElement {
+    const container = document.createElement("div");
+    container.classList.add(
+        CSS.CONTAINER,
+        CSS.CONTAINER_THUMBNAIL,
+        CSS.CORNER_BOTTOM_LEFT,
+    );
+    container.dataset.href = videoUrl;
+    // Keep mousedown from reaching the card underneath (focus, drag start and
+    // YouTube's own handlers).
+    container.onmousedown = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+    return container;
+}
 
 /**
  * `loading` shows the spinner, `ready` shows the badges, and `unavailable`
