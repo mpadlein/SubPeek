@@ -1,0 +1,6 @@
+# Normalise line endings: LF in the repo and in every checkout, whatever the
+# platform's core.autocrlf says. Prettier and .editorconfig assume LF too.
+* text=auto eol=lf
+
+*.png binary
+*.woff2 binary

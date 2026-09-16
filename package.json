@@ -13,6 +13,8 @@
         "zip": "wxt zip",
         "zip:firefox": "wxt zip -b firefox",
         "compile": "tsc --noEmit",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
         "postinstall": "wxt prepare",
         "screenshots": "node store-assets/screenshots/src/render.mjs store-assets/screenshots/src/slides store-assets/screenshots"
     },

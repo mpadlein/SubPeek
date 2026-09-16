@@ -21,10 +21,7 @@ function handleSetCache(data: any, sendResponse: (response?: any) => void) {
     });
 }
 
-function handleOpenOptionsPage(
-    data: any,
-    sendResponse: (response?: any) => void,
-) {
+function handleOpenOptionsPage(sendResponse: (response?: any) => void) {
     // Content scripts cannot call runtime.openOptionsPage() themselves.
     Promise.resolve(browser.runtime.openOptionsPage())
         .then(() => sendResponse(true))
@@ -44,7 +41,7 @@ export default defineBackground(() => {
         browser.tabs.reload = async () => {};
     }
 
-    browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         const { event, data } = message;
         switch (event) {
             case EXTENSION_EVENTS.getCacheVideoInfo:
@@ -54,7 +51,7 @@ export default defineBackground(() => {
                 handleSetCache(data, sendResponse);
                 return true;
             case EXTENSION_EVENTS.openOptionsPage:
-                handleOpenOptionsPage(data, sendResponse);
+                handleOpenOptionsPage(sendResponse);
                 return true;
         }
         return false;
