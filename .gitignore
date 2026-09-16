@@ -31,5 +31,6 @@ t.*
 .claude
 docs
 TODO.md
+*-TODO.md
 out
 .profile
