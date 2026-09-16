@@ -7,7 +7,7 @@ export default defineBackground(() => {
         .catch((error) => logger.error("Startup cache cleanup failed:", error));
 
     // monkey patch to prevent wxt auto reload,
-    if (import.meta.env.MODE == "development") {
+    if (import.meta.env.DEV) {
         browser.tabs.reload = async () => {};
     }
 

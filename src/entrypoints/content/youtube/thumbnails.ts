@@ -39,7 +39,7 @@ const intersectionObserver = new IntersectionObserver((entries) => {
         if (!entry.isIntersecting || !(img instanceof HTMLImageElement)) {
             continue;
         }
-        metricsProxy.itsOsvMatch++;
+        metricsProxy.visibleThumbnails++;
         intersectionObserver.unobserve(img);
         pendingImgs.delete(img);
         mountOverlay(img);
@@ -82,7 +82,7 @@ function observeVisibility(img: HTMLImageElement): void {
     intersectionObserver.observe(img);
     pendingImgs.add(img);
     if (pendingImgs.size > SWEEP_THRESHOLD) sweepDetachedImgs();
-    metricsProxy.itsOsv++;
+    metricsProxy.observedThumbnails++;
 }
 
 /**

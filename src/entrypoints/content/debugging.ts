@@ -5,9 +5,8 @@ const metrics = {
     fetchFallback: 0,
     rateLimited: 0,
     cacheHit: 0,
-    cacheExpired: 0,
-    itsOsv: 0,
-    itsOsvMatch: 0,
+    observedThumbnails: 0,
+    visibleThumbnails: 0,
 };
 
 export const metricsProxy = new Proxy(metrics, {

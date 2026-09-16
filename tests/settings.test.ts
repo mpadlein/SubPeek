@@ -7,9 +7,8 @@ async function load(stored: Record<string, unknown> = {}) {
     fakeBrowser.reset();
     await fakeBrowser.storage.local.set(stored);
     vi.resetModules();
-    const { browserStorageLocalSV } = await import("@/common/storage");
     const { Settings } = await import("@/common/settings");
-    await browserStorageLocalSV.ready();
+    await Settings.ready();
     return Settings;
 }
 
@@ -94,5 +93,15 @@ describe("Settings", () => {
         expect(good).toHaveBeenCalledOnce();
         expect(consoleError).toHaveBeenCalledOnce();
         consoleError.mockRestore();
+    });
+
+    it("works when add and remove are detached from Settings", async () => {
+        const Settings = await load();
+        const { add, remove } = Settings.langCodes;
+
+        add("fr");
+        remove("en");
+
+        expect(Settings.langCodes.get()).toEqual(["fr"]);
     });
 });

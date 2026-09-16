@@ -1,5 +1,7 @@
 /**
- * Lightweight IDBDatabase wrapper with Promise-based API
+ * Lightweight IDBDatabase wrapper with a Promise-based API for one object
+ * store. The store holds disposable data (a cache), so a version bump simply
+ * drops and recreates it.
  */
 
 interface StoreSchema {
@@ -18,110 +20,109 @@ export class IDBStore<T> {
         private schema: StoreSchema,
     ) {}
 
-    private async open(): Promise<IDBDatabase> {
-        if (this.db) return this.db;
+    private open(): Promise<IDBDatabase> {
+        if (this.db) return Promise.resolve(this.db);
         if (this.dbPromise) return this.dbPromise;
 
         this.dbPromise = new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, this.version);
-
-            request.onerror = () => {
+            const fail = (error: unknown) => {
                 this.dbPromise = null;
-                reject(request.error);
+                reject(error);
             };
 
+            request.onerror = () => fail(request.error);
             // Another tab still holds an older version open, so the upgrade
             // cannot proceed; fail instead of leaving every caller pending.
-            request.onblocked = () => {
-                this.dbPromise = null;
-                reject(
-                    new Error("IndexedDB open blocked by another connection"),
-                );
+            request.onblocked = () =>
+                fail(new Error("IndexedDB open blocked by another connection"));
+
+            request.onupgradeneeded = () => {
+                const db = request.result;
+                if (db.objectStoreNames.contains(this.storeName)) {
+                    db.deleteObjectStore(this.storeName);
+                }
+                const store = db.createObjectStore(this.storeName, {
+                    keyPath: this.schema.keyPath,
+                });
+                for (const index of this.schema.indexes ?? []) {
+                    store.createIndex(index.name, index.keyPath, {
+                        unique: index.unique ?? false,
+                    });
+                }
             };
 
             request.onsuccess = () => {
-                this.db = request.result;
-                this.db.onclose = () => {
+                const db = request.result;
+                this.db = db;
+                const forget = () => {
                     this.db = null;
                     this.dbPromise = null;
                 };
-                resolve(this.db);
-            };
-
-            request.onupgradeneeded = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
-                if (!db.objectStoreNames.contains(this.storeName)) {
-                    const store = db.createObjectStore(this.storeName, {
-                        keyPath: this.schema.keyPath,
-                    });
-                    for (const idx of this.schema.indexes ?? []) {
-                        store.createIndex(idx.name, idx.keyPath, {
-                            unique: idx.unique ?? false,
-                        });
-                    }
-                }
+                db.onclose = forget;
+                // Let another tab upgrade the database instead of blocking it.
+                db.onversionchange = () => {
+                    db.close();
+                    forget();
+                };
+                resolve(db);
             };
         });
 
         return this.dbPromise;
     }
 
-    private run<R>(
+    /** Runs `fn` inside a transaction and settles once the transaction does. */
+    private transaction<R>(
         mode: IDBTransactionMode,
-        fn: (store: IDBObjectStore) => IDBRequest<R>,
+        fn: (store: IDBObjectStore) => R,
     ): Promise<R> {
         return this.open().then(
             (db) =>
-                new Promise((resolve, reject) => {
+                new Promise<R>((resolve, reject) => {
                     const tx = db.transaction(this.storeName, mode);
-                    const store = tx.objectStore(this.storeName);
-                    const request = fn(store);
-                    request.onerror = () => reject(request.error);
-                    request.onsuccess = () => resolve(request.result);
-                    // Without this the promise never settles when the whole
-                    // transaction aborts (e.g. QuotaExceededError on put).
+                    const result = fn(tx.objectStore(this.storeName));
+                    tx.oncomplete = () => resolve(result);
+                    tx.onerror = () =>
+                        reject(tx.error ?? new Error("Transaction failed"));
+                    // e.g. QuotaExceededError on put; without this the
+                    // promise would never settle.
                     tx.onabort = () =>
                         reject(tx.error ?? new Error("Transaction aborted"));
                 }),
         );
+    }
+
+    private request<R>(
+        mode: IDBTransactionMode,
+        fn: (store: IDBObjectStore) => IDBRequest<R>,
+    ): Promise<R> {
+        return this.transaction(mode, fn).then((request) => request.result);
     }
 
     get(key: IDBValidKey): Promise<T | null> {
-        return this.run("readonly", (s) => s.get(key)).then((r) => r ?? null);
+        return this.request(
+            "readonly",
+            (store) => store.get(key) as IDBRequest<T | undefined>,
+        ).then((value) => value ?? null);
     }
 
     put(value: T): Promise<void> {
-        return this.run("readwrite", (s) => s.put(value)).then(() => {});
+        return this.request("readwrite", (store) => store.put(value)).then(
+            () => {},
+        );
     }
 
     deleteByIndexRange(indexName: string, range: IDBKeyRange): Promise<void> {
-        return this.open().then(
-            (db) =>
-                new Promise((resolve, reject) => {
-                    const tx = db.transaction(this.storeName, "readwrite");
-                    const store = tx.objectStore(this.storeName);
-                    const index = store.index(indexName);
-                    const request = index.openCursor(range);
-
-                    request.onerror = () => reject(request.error);
-                    request.onsuccess = (event) => {
-                        const cursor = (
-                            event.target as IDBRequest<IDBCursorWithValue>
-                        ).result;
-                        if (cursor) {
-                            cursor.delete();
-                            cursor.continue();
-                        }
-                    };
-
-                    tx.oncomplete = () => resolve();
-                    // Only oncomplete resolved this promise, so an aborted or
-                    // errored transaction left it pending forever.
-                    tx.onerror = () =>
-                        reject(tx.error ?? new Error("Transaction failed"));
-                    tx.onabort = () =>
-                        reject(tx.error ?? new Error("Transaction aborted"));
-                }),
-        );
+        return this.transaction("readwrite", (store) => {
+            const cursorRequest = store.index(indexName).openCursor(range);
+            cursorRequest.onsuccess = () => {
+                const cursor = cursorRequest.result;
+                if (cursor) {
+                    cursor.delete();
+                    cursor.continue();
+                }
+            };
+        });
     }
 }

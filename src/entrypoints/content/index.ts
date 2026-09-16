@@ -1,5 +1,4 @@
 import { Settings } from "@/common/settings";
-import { browserStorageLocalSV } from "@/common/storage";
 import { start, stop } from "./main";
 import "./youtube/styles/index.scss";
 import { getYtcfg } from "./youtube/ytcfg";
@@ -10,7 +9,7 @@ export default defineContentScript({
     cssInjectionMode: "manifest",
 
     async main() {
-        await browserStorageLocalSV.ready();
+        await Settings.ready();
 
         getYtcfg();
 

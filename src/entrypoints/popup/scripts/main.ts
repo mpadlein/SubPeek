@@ -1,6 +1,5 @@
 import { ICON_HEART } from "@/common/icons";
 import { Settings } from "@/common/settings";
-import { browserStorageLocalSV } from "@/common/storage";
 import { html, render } from "lit-html";
 import { createFavoritedLanguages } from "./favorited-languages";
 import { createLanguageDropdown } from "./language-dropdown";
@@ -137,7 +136,7 @@ function renderApp() {
 }
 
 (async () => {
-    await browserStorageLocalSV.ready();
+    await Settings.ready();
     renderApp();
     Settings.langCodes.subscribe(renderApp);
     Settings.enabled.subscribe(renderApp);

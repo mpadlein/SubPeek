@@ -1,4 +1,4 @@
-import type { CacheEntry, VideoInfo } from "./types";
+import type { VideoInfo } from "./types";
 
 /**
  * The message protocol between the content script and the background script.
@@ -19,7 +19,7 @@ export type MessageType = Message["type"];
 
 /** What the background script replies with, per message type. */
 export interface Responses {
-    getCachedVideoInfo: CacheEntry | null;
+    getCachedVideoInfo: VideoInfo | null;
     saveVideoInfo: void;
     openOptionsPage: void;
 }
@@ -39,7 +39,7 @@ function send<T extends MessageType>(
 
 /** Content-script side of the protocol. */
 export const messaging = {
-    getCachedVideoInfo(videoId: string): Promise<CacheEntry | null> {
+    getCachedVideoInfo(videoId: string): Promise<VideoInfo | null> {
         return send({ type: "getCachedVideoInfo", videoId });
     },
     saveVideoInfo(videoId: string, info: VideoInfo): Promise<void> {
