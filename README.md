@@ -21,8 +21,13 @@ SubPeek collects no data.
 - Your favorite-language list is stored locally in the browser (`browser.storage.local`)
 - Video track data is fetched directly from YouTube itself, using the same endpoints the site uses, and cached locally in IndexedDB
 - No analytics, no telemetry, no third-party servers, no remote code - the extension package is fully self-contained (fonts included)
+- The "Send feedback" link in the popup opens a Google Form in a new tab; the extension version and browser major (e.g. `1.0.0 Chrome 152`) are pre-filled in the link so you don't have to type them. The extension itself sends nothing, and no response is recorded unless you press Submit
 
 Permissions: `storage` plus host access to `youtube.com` only.
+
+## Feedback
+
+Found a bug or have an idea? Use the [feedback form](https://docs.google.com/forms/d/e/1FAIpQLSfsnyyLlHckyDhdk30rz5ZZh_T6qP1OKWPVNthX8xcTZbiOEw/viewform?hl=en) (no sign-in needed) or [open an issue](https://github.com/mpadlein/SubPeek/issues). For bugs, the page you were on (home, search, watch page) and any `[SubPeek]` lines from the browser console help a lot.
 
 ## Install
 
