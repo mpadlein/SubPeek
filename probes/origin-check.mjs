@@ -45,16 +45,15 @@ class CDP {
         this.ws = ws;
         this.nextId = 0;
         this.pending = new Map();
-        this.onEvent = () => {};
+        this.onEvent = null;
         ws.onmessage = (e) => {
             const m = JSON.parse(e.data);
-            if (!m.id) return this.onEvent(m);
+            if (!m.id) return this.onEvent?.(m);
             const p = this.pending.get(m.id);
             this.pending.delete(m.id);
-            if (p)
-                m.error
-                    ? p.reject(new Error(m.error.message))
-                    : p.resolve(m.result);
+            if (!p) return;
+            if (m.error) p.reject(new Error(m.error.message));
+            else p.resolve(m.result);
         };
     }
     send(method, params = {}, sessionId) {

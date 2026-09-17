@@ -75,6 +75,10 @@ describe("videoCache", () => {
     });
 });
 
+/** IndexedDB reports failures through a nullable `error`; always reject with an Error. */
+const failure = (error: DOMException | null) =>
+    error ?? new Error("IndexedDB request failed");
+
 /** Creates the database the way version 1 of the extension did. */
 function seedVersion1(entry: unknown): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -85,7 +89,7 @@ function seedVersion1(entry: unknown): Promise<void> {
             });
             store.createIndex("timestamp", "timestamp");
         };
-        request.onerror = () => reject(request.error);
+        request.onerror = () => reject(failure(request.error));
         request.onsuccess = () => {
             const db = request.result;
             const tx = db.transaction(STORE, "readwrite");
@@ -94,7 +98,7 @@ function seedVersion1(entry: unknown): Promise<void> {
                 db.close();
                 resolve();
             };
-            tx.onerror = () => reject(tx.error);
+            tx.onerror = () => reject(failure(tx.error));
         };
     });
 }
@@ -102,7 +106,7 @@ function seedVersion1(entry: unknown): Promise<void> {
 function countEntries(): Promise<number> {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME);
-        request.onerror = () => reject(request.error);
+        request.onerror = () => reject(failure(request.error));
         request.onsuccess = () => {
             const db = request.result;
             const count = db.transaction(STORE).objectStore(STORE).count();
@@ -110,7 +114,7 @@ function countEntries(): Promise<number> {
                 db.close();
                 resolve(count.result);
             };
-            count.onerror = () => reject(count.error);
+            count.onerror = () => reject(failure(count.error));
         };
     });
 }

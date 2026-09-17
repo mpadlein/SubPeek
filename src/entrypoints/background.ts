@@ -6,9 +6,10 @@ export default defineBackground(() => {
         .cleanExpired()
         .catch((error) => logger.error("Startup cache cleanup failed:", error));
 
-    // monkey patch to prevent wxt auto reload,
+    // Dev only: WXT reloads open tabs after a rebuild; make that a no-op so
+    // YouTube tabs keep their state.
     if (import.meta.env.DEV) {
-        browser.tabs.reload = async () => {};
+        browser.tabs.reload = () => Promise.resolve();
     }
 
     listenForMessages({

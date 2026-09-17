@@ -34,9 +34,8 @@ class CDP {
             const p = this.pending.get(m.id);
             this.pending.delete(m.id);
             if (!p) return;
-            m.error
-                ? p.reject(new Error(m.error.message))
-                : p.resolve(m.result);
+            if (m.error) p.reject(new Error(m.error.message));
+            else p.resolve(m.result);
         };
     }
     send(method, params = {}, sessionId) {

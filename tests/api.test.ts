@@ -1,13 +1,12 @@
 import type { VideoInfo } from "@/common/types";
+import type * as ytcfgModule from "@/entrypoints/content/youtube/ytcfg";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeBrowser } from "wxt/testing/fake-browser";
 
 // The page's ytcfg is read from inline scripts; hand the InnerTube route a
 // fixed context instead so the tests can focus on the fetch and parse logic.
 vi.mock("@/entrypoints/content/youtube/ytcfg", async (importOriginal) => ({
-    ...(await importOriginal<
-        typeof import("@/entrypoints/content/youtube/ytcfg")
-    >()),
+    ...(await importOriginal<typeof ytcfgModule>()),
     getYtcfg: () => ({
         context: { client: { clientVersion: "2.20260901", visitorData: "v" } },
         clientName: 1,
@@ -35,6 +34,14 @@ async function loadApi() {
 }
 
 const WATCH_URL = "https://www.youtube.com/watch?v=abc123";
+
+/** The parsed JSON body of a request the code under test made. */
+function jsonBody(init: RequestInit | undefined): unknown {
+    if (typeof init?.body !== "string") {
+        throw new Error("expected a string request body");
+    }
+    return JSON.parse(init.body);
+}
 
 function playerResponse(description = "plain", status = "OK") {
     return {
@@ -114,7 +121,7 @@ describe("resolveVideoInfo over InnerTube", () => {
             "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
         );
         expect(init?.method).toBe("POST");
-        expect(JSON.parse(String(init?.body))).toMatchObject({
+        expect(jsonBody(init)).toMatchObject({
             videoId: "abc123",
             context: { client: { clientVersion: "2.20260901" } },
         });

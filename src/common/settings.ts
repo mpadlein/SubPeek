@@ -37,11 +37,13 @@ export const Settings = {
     /** Favorite language codes, in the order the user ranked them. */
     langCodes: {
         ...langCodes,
-        add(code: string): void {
+        // Arrow functions, not methods: they close over the accessor and can
+        // be passed around detached.
+        add: (code: string): void => {
             const current = langCodes.get();
             if (!current.includes(code)) langCodes.set([...current, code]);
         },
-        remove(code: string): void {
+        remove: (code: string): void => {
             langCodes.set(langCodes.get().filter((c) => c !== code));
         },
     },

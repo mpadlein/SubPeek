@@ -71,6 +71,7 @@ tests/                            # Vitest unit tests
 probes/                           # Headless-browser regression checks (not shipped)
 public/                           # Icons, bundled Inter font, Buy Me a Coffee button
 wxt.config.ts                     # Manifest, build targets, zip exclusions
+eslint.config.js, vitest.config.ts, tsconfig.json, .prettierrc.json
 ```
 
 `@/` maps to `src/` (configured by WXT in `.wxt/tsconfig.json`).
@@ -355,8 +356,9 @@ Three layers, from fastest to slowest:
    `Proxy` that re-renders the overlay on every write; production code
    increments it freely, and it is a no-op while the overlay is not mounted.
 
-CI (`.github/workflows/ci.yml`) runs the type check, the Prettier check, the
-unit tests and both production builds on every push and pull request.
+CI (`.github/workflows/ci.yml`) runs the type check, ESLint, the Prettier
+check, the unit tests and both production builds on every push and pull
+request.
 
 ## Conventions
 
@@ -374,4 +376,12 @@ unit tests and both production builds on every push and pull request.
   everywhere (`.gitattributes`).
 - `tsconfig.json` enables `noUnusedLocals` and `noUnusedParameters` on top of
   WXT's strict defaults.
+- ESLint (`eslint.config.js`, `npm run lint`) runs typescript-eslint's
+  type-aware recommended and stylistic rule sets over every TypeScript file,
+  plus `eqeqeq`, `prefer-const`, inline `type` imports and exhaustive
+  switches. The main catches are unhandled promises (`no-floating-promises`:
+  a fire-and-forget call is marked with `void`) and `any` leaking out of
+  parsed JSON (`no-unsafe-*`: narrow with a type guard instead). Test files
+  may use empty and non-awaiting async stubs; the probes are linted as plain
+  Node scripts.
 - Use ASCII hyphens, not en/em dashes, in comments and docs.

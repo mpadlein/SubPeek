@@ -56,9 +56,9 @@ class BiDi {
             const p = this.pending.get(m.id);
             this.pending.delete(m.id);
             if (!p) return;
-            m.type === "error"
-                ? p.reject(new Error(`${m.error}: ${m.message}`))
-                : p.resolve(m.result);
+            if (m.type === "error")
+                p.reject(new Error(`${m.error}: ${m.message}`));
+            else p.resolve(m.result);
         };
     }
     send(method, params = {}) {

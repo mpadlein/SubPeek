@@ -135,9 +135,11 @@ function renderApp() {
     render(appTemplate(), document.getElementById("app")!);
 }
 
-(async () => {
+async function main() {
     await Settings.ready();
     renderApp();
     Settings.langCodes.subscribe(renderApp);
     Settings.enabled.subscribe(renderApp);
-})();
+}
+
+main().catch((error) => logger.error("Popup failed to start:", error));

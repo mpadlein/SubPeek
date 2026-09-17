@@ -13,7 +13,7 @@ async function renderPopup(
         manifest_version: 3,
         name: "SubPeek",
         version: "1.1.0",
-    } as ReturnType<typeof fakeBrowser.runtime.getManifest>);
+    });
     Object.defineProperty(navigator, "userAgent", {
         value: userAgent,
         configurable: true,

@@ -19,12 +19,16 @@ const metrics = {
     visibleThumbnails: 0,
 };
 
+type Metrics = typeof metrics;
+
+const isMetric = (prop: string | symbol): prop is keyof Metrics =>
+    typeof prop === "string" && prop in metrics;
+
 export const metricsProxy = new Proxy(metrics, {
-    get(target, prop: string) {
-        return prop in target ? target[prop as keyof typeof target] : 0;
-    },
-    set(target, prop: string, value) {
-        target[prop as keyof typeof target] = value;
+    get: (target, prop) => (isMetric(prop) ? target[prop] : 0),
+    set(target, prop, value: number) {
+        if (!isMetric(prop)) return false;
+        target[prop] = value;
         updateMetrics();
         return true;
     },

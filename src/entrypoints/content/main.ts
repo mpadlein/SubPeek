@@ -28,7 +28,7 @@ const addedNodesObserver = new MutationObserver((mutations) => {
 // stop() can undo all of it.
 
 let running = false;
-let unsubscribeFavorites = () => {};
+let unsubscribeFavorites: (() => void) | null = null;
 
 export function start(): void {
     if (running) return;
@@ -57,7 +57,8 @@ export function stop(): void {
     running = false;
 
     addedNodesObserver.disconnect();
-    unsubscribeFavorites();
+    unsubscribeFavorites?.();
+    unsubscribeFavorites = null;
     closePopup();
     stopPreviews();
     stopThumbnails();

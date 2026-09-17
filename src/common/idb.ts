@@ -26,12 +26,13 @@ export class IDBStore<T> {
 
         this.dbPromise = new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, this.version);
-            const fail = (error: unknown) => {
+            const fail = (error: Error) => {
                 this.dbPromise = null;
                 reject(error);
             };
 
-            request.onerror = () => fail(request.error);
+            request.onerror = () =>
+                fail(request.error ?? new Error("IndexedDB open failed"));
             // Another tab still holds an older version open, so the upgrade
             // cannot proceed; fail instead of leaving every caller pending.
             request.onblocked = () =>
@@ -109,7 +110,7 @@ export class IDBStore<T> {
 
     put(value: T): Promise<void> {
         return this.request("readwrite", (store) => store.put(value)).then(
-            () => {},
+            () => undefined,
         );
     }
 

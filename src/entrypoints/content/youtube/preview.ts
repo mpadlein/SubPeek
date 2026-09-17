@@ -64,7 +64,7 @@ function syncPreviewOverlay(preview: HTMLElement): void {
     const newContainer = createEmbedContainer(videoUrl);
     newHost.appendChild(newContainer);
     playerBox.appendChild(newHost);
-    initEmbed(newContainer, videoUrl);
+    void initEmbed(newContainer, videoUrl);
 }
 
 /** Preview elements inside `root`, plus `root` itself when it is one. */

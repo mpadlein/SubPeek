@@ -1,6 +1,16 @@
+/** The parts of ytcfg's INNERTUBE_CONTEXT that SubPeek reads; the rest is forwarded as is. */
+export interface InnerTubeContext {
+    client: {
+        clientVersion: string;
+        visitorData?: string;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
+
 export interface YtcfgSnapshot {
-    /** ytcfg INNERTUBE_CONTEXT */
-    context: any;
+    /** ytcfg INNERTUBE_CONTEXT, sent back to YouTube as the request context. */
+    context: InnerTubeContext;
     /** ytcfg INNERTUBE_CONTEXT_CLIENT_NAME - 1 for the WEB client */
     clientName?: number;
     /** ytcfg STS - signature timestamp */
@@ -33,25 +43,38 @@ export function getYtcfg(): YtcfgSnapshot | null {
     return snapshot;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+}
+
+function isInnerTubeContext(value: unknown): value is InnerTubeContext {
+    return (
+        isRecord(value) &&
+        isRecord(value.client) &&
+        typeof value.client.clientVersion === "string"
+    );
+}
+
 function readYtcfg(): YtcfgSnapshot | null {
-    const data: Partial<Record<(typeof KEYS)[number], any>> = {};
+    const data: Partial<Record<(typeof KEYS)[number], unknown>> = {};
 
     for (const script of Array.from(document.scripts)) {
         if (script.src) continue;
         const text = script.textContent;
-        if (!text || !text.includes("ytcfg.set(")) continue;
+        if (!text?.includes("ytcfg.set(")) continue;
 
         for (const match of text.matchAll(SET_CALL)) {
             const start = match.index + match[0].length - 1; // the "{"
             const literal = balancedObject(text, start);
             if (!literal) continue;
 
-            let parsed: any;
+            let parsed: unknown;
             try {
                 parsed = JSON.parse(literal);
             } catch {
                 continue;
             }
+            if (!isRecord(parsed)) continue;
 
             for (const key of KEYS) {
                 if (key in parsed) data[key] = parsed[key];
@@ -60,12 +83,14 @@ function readYtcfg(): YtcfgSnapshot | null {
     }
 
     const context = data.INNERTUBE_CONTEXT;
-    if (!context?.client) return null;
+    if (!isInnerTubeContext(context)) return null;
 
+    const clientName = data.INNERTUBE_CONTEXT_CLIENT_NAME;
+    const sts = data.STS;
     return {
         context,
-        clientName: data.INNERTUBE_CONTEXT_CLIENT_NAME,
-        sts: data.STS,
+        clientName: typeof clientName === "number" ? clientName : undefined,
+        sts: typeof sts === "number" ? sts : undefined,
         loggedIn: !!data.LOGGED_IN,
     };
 }

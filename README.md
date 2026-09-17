@@ -58,6 +58,7 @@ npm install
 | `npm run build`         | Production build (Chrome, MV3)           |
 | `npm run build:firefox` | Production build (Firefox)               |
 | `npm run compile`       | Type-check with `tsc --noEmit`           |
+| `npm run lint`          | ESLint (typescript-eslint, type-aware)   |
 | `npm test`              | Unit tests (Vitest)                      |
 | `npm run format`        | Format with Prettier                     |
 | `npm run probe:<name>`  | Headless browser checks (see `probes/`)  |

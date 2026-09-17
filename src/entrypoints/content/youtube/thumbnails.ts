@@ -65,7 +65,7 @@ const srcObserver = new MutationObserver((mutations) => {
 
         const newContainer = createEmbedContainer(videoUrl);
         container.replaceWith(newContainer);
-        initEmbed(newContainer, videoUrl);
+        void initEmbed(newContainer, videoUrl);
     }
 });
 
@@ -101,7 +101,7 @@ function mountOverlay(img: HTMLImageElement): void {
 
     const container = createEmbedContainer(videoUrl);
     wrapper.appendChild(container);
-    initEmbed(container, videoUrl);
+    void initEmbed(container, videoUrl);
 
     srcObserver.observe(img, { attributes: true, attributeFilter: ["src"] });
 }

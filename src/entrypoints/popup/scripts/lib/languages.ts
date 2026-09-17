@@ -25,15 +25,11 @@ const POPULAR_LANGUAGES = [
 ];
 
 function getBrowserLanguage(): string {
-    let code = navigator.language;
-    if (code in LANG_CODES) {
-        return code;
-    }
+    const language = navigator.language;
+    if (language in LANG_CODES) return language;
 
-    code = code.split("-")[0] as string;
-    if (code in LANG_CODES) {
-        return code;
-    }
+    const [base] = language.split("-");
+    if (base && base in LANG_CODES) return base;
 
     return "en";
 }
