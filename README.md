@@ -78,7 +78,7 @@ The bundled Inter font files in `public/fonts/` are the latin and latin-ext woff
 2. For each visible video, track data is fetched from YouTube's InnerTube API (the page's own config is read from its inline `ytcfg.set({...})` script); if that fails, it falls back to scraping `ytInitialPlayerResponse` from the watch page
 3. Results are cached in IndexedDB (managed by the background script, 30-minute TTL) and rendered as badge overlays with [lit-html](https://lit.dev/docs/libraries/standalone-templates/)
 
-See `CLAUDE.md` for a fuller architecture walkthrough.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full walkthrough: runtime contexts, data flow, the design decisions behind them, and how the extension is tested.
 
 ## Project structure
 

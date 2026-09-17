@@ -48,6 +48,7 @@ export default defineConfig({
             "probes/**",
             "CLAUDE.md",
             "TODO.md",
+            "*-TODO.md",
         ],
     },
 });
