@@ -25,7 +25,8 @@
         "probe:hover": "node probes/hover-check.mjs",
         "probe:messaging": "node probes/messaging-check.mjs",
         "probe:search-keys": "node probes/search-keys-check.mjs",
-        "probe:origin": "node probes/origin-check.mjs"
+        "probe:origin": "node probes/origin-check.mjs",
+        "probe:filter": "node probes/filter-check.mjs"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",

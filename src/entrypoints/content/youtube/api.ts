@@ -42,6 +42,48 @@ const ORIGINAL_AUDIO_TRACK_TYPE = "4";
 const fetchLimit = pLimit(4);
 const FETCH_TIMEOUT_MS = 30_000;
 
+/**
+ * Token bucket over every request to YouTube, on top of the concurrency limit.
+ * The capacity covers a page load plus a couple of scroll steps on the home
+ * grid at once; after that, requests go out at the refill rate, which keeps
+ * up with a person skimming. Cache hits and skipped lookups cost nothing, so
+ * the bucket is charged inside the fetch tasks only.
+ */
+const BUCKET_CAPACITY = 40;
+const REFILL_PER_MS = 3 / 1000;
+let tokens = BUCKET_CAPACITY;
+let lastRefill = Date.now();
+
+function refillBucket(): void {
+    const now = Date.now();
+    tokens = Math.min(
+        BUCKET_CAPACITY,
+        tokens + (now - lastRefill) * REFILL_PER_MS,
+    );
+    lastRefill = now;
+}
+
+/**
+ * Takes one token, waiting for it when the bucket is empty. The balance may
+ * go negative: each waiter reserves the next token to be refilled, so
+ * concurrent waiters line up at the refill rate instead of all firing at once.
+ */
+async function takeToken(): Promise<void> {
+    refillBucket();
+    tokens -= 1;
+    if (tokens >= 0) return;
+    const wait = -tokens / REFILL_PER_MS;
+    await new Promise((resolve) => setTimeout(resolve, wait));
+}
+
+/**
+ * Hands a taken token back when the request it was for is not made after
+ * all, so a lookup skipped after its wait does not delay the next one.
+ */
+function releaseToken(): void {
+    tokens += 1;
+}
+
 /** Matches up to and including the opening brace of the watch-page player JSON. */
 const PLAYER_RESPONSE_ASSIGNMENT = /var ytInitialPlayerResponse\s*=\s*\{/;
 
@@ -59,12 +101,18 @@ function handleRateLimit(source: string): void {
     );
 }
 
+/** Whether some caller still wants the result of a queued lookup. */
+type StillNeeded = () => boolean;
+
 /**
  * Checked again inside the p-limit task, not just before queueing: a request
- * queued moments before the user turned SubPeek off must not go out.
+ * queued moments before the user turned SubPeek off must not go out, and
+ * neither must one for a card that has gone away while it waited its turn.
  */
-function shouldSkipFetch(): boolean {
-    return Date.now() < backoffUntil || !Settings.enabled.get();
+function shouldSkipFetch(stillNeeded: StillNeeded): boolean {
+    return (
+        Date.now() < backoffUntil || !Settings.enabled.get() || !stillNeeded()
+    );
 }
 
 /**
@@ -75,8 +123,9 @@ function shouldSkipFetch(): boolean {
  */
 async function fetchPlayerResponseInnerTube(
     videoId: string,
+    stillNeeded: StillNeeded,
 ): Promise<PlayerResponse | null> {
-    if (shouldSkipFetch()) return null;
+    if (shouldSkipFetch(stillNeeded)) return null;
 
     const cfg = getYtcfg();
     if (!cfg) throw new Error("ytcfg unavailable");
@@ -97,7 +146,12 @@ async function fetchPlayerResponseInnerTube(
     const endpoint = `${location.origin}/youtubei/v1/player?prettyPrint=false`;
 
     return fetchLimit(async () => {
-        if (shouldSkipFetch()) return null;
+        if (shouldSkipFetch(stillNeeded)) return null;
+        await takeToken();
+        if (shouldSkipFetch(stillNeeded)) {
+            releaseToken();
+            return null;
+        }
 
         const res = await fetch(endpoint, {
             method: "POST",
@@ -129,9 +183,15 @@ async function fetchPlayerResponseInnerTube(
 
 async function fetchPlayerResponseFallback(
     url: string,
+    stillNeeded: StillNeeded,
 ): Promise<PlayerResponse | null> {
     return fetchLimit(async () => {
-        if (shouldSkipFetch()) return null;
+        if (shouldSkipFetch(stillNeeded)) return null;
+        await takeToken();
+        if (shouldSkipFetch(stillNeeded)) {
+            releaseToken();
+            return null;
+        }
         const res = await fetch(url, {
             signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         });
@@ -169,14 +229,15 @@ async function fetchPlayerResponseFallback(
 async function fetchPlayerResponse(
     url: string,
     videoId: string,
+    stillNeeded: StillNeeded,
 ): Promise<PlayerResponse | null> {
     try {
-        return await fetchPlayerResponseInnerTube(videoId);
+        return await fetchPlayerResponseInnerTube(videoId, stillNeeded);
     } catch (error) {
         logger.error("fetch PlayerResponseInnerTube error:", error);
     }
     try {
-        return await fetchPlayerResponseFallback(url);
+        return await fetchPlayerResponseFallback(url, stillNeeded);
     } catch (error) {
         logger.error("fetch PlayerResponseFallback error:", error);
     }
@@ -227,16 +288,33 @@ function parseVideoResponse(playerResp: PlayerResponse): VideoInfo {
 
 /**
  * Collapses concurrent lookups for the same video (a video often appears in
- * several thumbnails at once) into a single cache read + fetch.
+ * several thumbnails at once) into a single cache read + fetch. Every caller
+ * that joins contributes its `stillNeeded`; the fetch is skipped only when
+ * none of them wants the result any more.
  */
-const inFlight = new Map<string, Promise<VideoInfo | null>>();
+interface InFlight {
+    promise: Promise<VideoInfo | null>;
+    stillNeeded: StillNeeded[];
+    /** Set once the fetch was skipped because no caller wanted it any more. */
+    abandoned: boolean;
+}
+const inFlight = new Map<string, InFlight>();
 
 /**
  * Resolves the tracks of the video behind a watch URL, or null when they
- * cannot be known: no video id, rate limited, fetch failed, or the video is
- * not playable. Callers must not render null as "0 tracks".
+ * cannot be known: no video id, rate limited, fetch failed, the video is not
+ * playable, or `stillNeeded` said no by the time the request was about to go
+ * out. Callers must not render null as "0 tracks".
+ *
+ * `stillNeeded` is asked right before a request is made, not when the lookup
+ * is queued: after a fast scroll the queue is full of cards that have since
+ * been recycled, and answering false there saves the request and hands the
+ * turn to the next lookup.
  */
-export function resolveVideoInfo(url: string): Promise<VideoInfo | null> {
+export function resolveVideoInfo(
+    url: string,
+    stillNeeded: StillNeeded = () => true,
+): Promise<VideoInfo | null> {
     const videoId = extractVideoId(url);
     if (!videoId) {
         logger.debug("No video id in URL, skipping: " + url);
@@ -244,23 +322,43 @@ export function resolveVideoInfo(url: string): Promise<VideoInfo | null> {
     }
 
     const pending = inFlight.get(videoId);
-    if (pending) return pending;
+    if (pending) {
+        pending.stillNeeded.push(stillNeeded);
+        // A caller arriving after the skip decision, in the moments before
+        // the shared promise settles, would otherwise get that null although
+        // it still wants the result; it looks the video up afresh instead.
+        return pending.promise.then((info) =>
+            info === null && pending.abandoned && stillNeeded()
+                ? resolveVideoInfo(url, stillNeeded)
+                : info,
+        );
+    }
 
-    const request = doResolveVideoInfo(url, videoId).finally(() => {
-        inFlight.delete(videoId);
-    });
-    inFlight.set(videoId, request);
-    return request;
+    const predicates = [stillNeeded];
+    const entry: InFlight = {
+        promise: doResolveVideoInfo(url, videoId, () => {
+            const needed = predicates.some((wanted) => wanted());
+            if (!needed) entry.abandoned = true;
+            return needed;
+        }).finally(() => {
+            inFlight.delete(videoId);
+        }),
+        stillNeeded: predicates,
+        abandoned: false,
+    };
+    inFlight.set(videoId, entry);
+    return entry.promise;
 }
 
 async function doResolveVideoInfo(
     url: string,
     videoId: string,
+    stillNeeded: StillNeeded,
 ): Promise<VideoInfo | null> {
     const cached = await getCache(videoId);
     if (cached) return cached;
 
-    const playerResp = await fetchPlayerResponse(url, videoId);
+    const playerResp = await fetchPlayerResponse(url, videoId, stillNeeded);
     if (!playerResp) return null;
 
     // 200 OK with a non-OK status (private, age-gated, region-blocked) carries

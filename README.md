@@ -12,6 +12,7 @@ A Chrome/Firefox browser extension that shows which YouTube videos have captions
 - **Favorite languages**: pick the languages you care about; matching tracks are highlighted and sorted first
 - **Track popup**: click a badge to see the full list of caption/audio languages for that video and toggle favorites inline
 - **Fast and polite**: results are cached locally for 30 minutes, lookups only run for thumbnails that actually scroll into view, and concurrent requests are capped with rate-limit backoff
+- **Only show my languages**: a switch on search results and channel Videos tabs hides every video that has no caption or dub in your languages, with a count of what it hid; it reuses the lookups the badges already made
 - **One-click off switch**: flip the toggle in the toolbar popup (or the power button in the track popup) and SubPeek removes its badges and stops all lookups until you turn it back on
 
 ## Privacy
@@ -78,6 +79,7 @@ The bundled Inter font files in `public/fonts/` are the latin and latin-ext woff
 1. A content script watches the page for video thumbnails (`MutationObserver`) and defers work until a thumbnail is actually visible (`IntersectionObserver`)
 2. For each visible video, track data is fetched from YouTube's InnerTube API (the page's own config is read from its inline `ytcfg.set({...})` script); if that fails, it falls back to scraping `ytInitialPlayerResponse` from the watch page
 3. Results are cached in IndexedDB (managed by the background script, 30-minute TTL) and rendered as badge overlays with [lit-html](https://lit.dev/docs/libraries/standalone-templates/)
+4. The "Only show my languages" switch hides cards from those same results as their badges render; it makes no requests of its own
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full walkthrough: runtime contexts, data flow, the design decisions behind them, and how the extension is tested.
 
@@ -88,7 +90,7 @@ src/
   entrypoints/
     content/            # Content script
       main.ts           #   lifecycle (start/stop) + DOM observer
-      youtube/          #   api.ts, ytcfg.ts, thumbnails.ts, preview.ts, ui/, styles/
+      youtube/          #   api.ts, ytcfg.ts, thumbnails.ts, preview.ts, filter.ts, ui/, styles/
     background.ts       # Service worker: IndexedDB cache + message handlers
     popup/              # Settings UI (favorite languages)
   common/               # Shared storage, settings, cache, messaging, icons, types

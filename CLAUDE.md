@@ -14,7 +14,7 @@ SubPeek - a Chrome/Firefox browser extension that shows caption (subtitle) and d
 - `npm run lint` - ESLint with typescript-eslint (type-aware rules; `npx eslint . --fix` applies the safe fixes)
 - `npm run format` / `npm run format:check` - Prettier over the whole tree
 - `npm test` - Vitest unit tests in `tests/` (`npm run test:watch` for watch mode)
-- `npm run probe:<name>` - headless-browser regression checks in `probes/` (toggle, toggle:firefox, hover, messaging, search-keys, origin); they need Edge or Firefox and network access
+- `npm run probe:<name>` - headless-browser regression checks in `probes/` (toggle, toggle:firefox, hover, messaging, search-keys, origin, filter); they need Edge or Firefox and network access
 - `npm run zip` / `npm run zip:firefox` - package for distribution; the Firefox zip also emits `.output/subpeek-<version>-sources.zip` for AMO review
 
 CI (`.github/workflows/ci.yml`) runs `compile`, `lint`, `format:check`, `test` and both builds on every push and pull request.

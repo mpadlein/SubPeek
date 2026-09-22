@@ -1,6 +1,6 @@
 import type { VideoInfo } from "@/common/types";
 import type * as ytcfgModule from "@/entrypoints/content/youtube/ytcfg";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeBrowser } from "wxt/testing/fake-browser";
 
 // The page's ytcfg is read from inline scripts; hand the InnerTube route a
@@ -230,6 +230,216 @@ describe("resolveVideoInfo short-circuits", () => {
         expect(
             await resolveVideoInfo("https://www.youtube.com/watch?list=PL1"),
         ).toBeNull();
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+});
+
+describe("resolveVideoInfo request throttle", () => {
+    const videoUrl = (n: number) => `https://www.youtube.com/watch?v=vid${n}`;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        fetchMock.mockImplementation(() =>
+            Promise.resolve(json(playerResponse())),
+        );
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("lets a burst of 40 requests through, then three per second", async () => {
+        const { resolveVideoInfo } = await loadApi();
+
+        const lookups = Array.from({ length: 50 }, (_, i) =>
+            resolveVideoInfo(videoUrl(i)),
+        );
+
+        await vi.advanceTimersByTimeAsync(0);
+        expect(fetchMock).toHaveBeenCalledTimes(40);
+
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(fetchMock).toHaveBeenCalledTimes(43);
+
+        await vi.advanceTimersByTimeAsync(4000);
+        expect(fetchMock).toHaveBeenCalledTimes(50);
+        expect(await Promise.all(lookups)).toHaveLength(50);
+    });
+
+    it("refills the burst allowance while idle, up to the cap", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        await Promise.all(
+            Array.from({ length: 40 }, (_, i) => resolveVideoInfo(videoUrl(i))),
+        );
+        expect(fetchMock).toHaveBeenCalledTimes(40);
+
+        // A minute idle would refill 180 tokens; only 40 fit in the bucket.
+        await vi.advanceTimersByTimeAsync(60_000);
+        void Array.from({ length: 50 }, (_, i) =>
+            resolveVideoInfo(videoUrl(100 + i)),
+        );
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(fetchMock).toHaveBeenCalledTimes(80);
+    });
+
+    it("charges the watch-page fallback a token of its own", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        // The first lookup's InnerTube request fails and it falls back to
+        // the watch page: 41 requests for a bucket of 40.
+        fetchMock.mockResolvedValueOnce(json({ error: "boom" }, 500));
+        const lookups = Array.from({ length: 40 }, (_, i) =>
+            resolveVideoInfo(videoUrl(i)),
+        );
+
+        await vi.advanceTimersByTimeAsync(0);
+        expect(fetchMock).toHaveBeenCalledTimes(40);
+
+        await vi.advanceTimersByTimeAsync(334);
+        expect(fetchMock).toHaveBeenCalledTimes(41);
+        expect(await Promise.all(lookups)).toHaveLength(40);
+    });
+
+    it("does not charge cache hits against the allowance", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        cache.getCachedVideoInfo.mockResolvedValue(expectedTracks);
+        await Promise.all(
+            Array.from({ length: 100 }, (_, i) =>
+                resolveVideoInfo(videoUrl(i)),
+            ),
+        );
+        cache.getCachedVideoInfo.mockResolvedValue(null);
+
+        void resolveVideoInfo(videoUrl(999));
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe("resolveVideoInfo stillNeeded", () => {
+    const videoUrl = (n: number) => `https://www.youtube.com/watch?v=vid${n}`;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        fetchMock.mockImplementation(() =>
+            Promise.resolve(json(playerResponse())),
+        );
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("skips the fetch when the caller no longer needs the result", async () => {
+        const { resolveVideoInfo } = await loadApi();
+
+        expect(await resolveVideoInfo(WATCH_URL, () => false)).toBeNull();
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("asks at fetch time, not when the lookup is queued", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        // Four fetches held open fill the concurrency limit.
+        const release: (() => void)[] = [];
+        fetchMock.mockImplementation(
+            () =>
+                new Promise((resolve) =>
+                    release.push(() => resolve(json(playerResponse()))),
+                ),
+        );
+        for (let i = 0; i < 4; i++) void resolveVideoInfo(videoUrl(i));
+        await vi.advanceTimersByTimeAsync(0);
+        expect(fetchMock).toHaveBeenCalledTimes(4);
+
+        let needed = true;
+        const queued = resolveVideoInfo(videoUrl(9), () => needed);
+        await vi.advanceTimersByTimeAsync(0);
+        needed = false;
+        release.forEach((r) => r());
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(await queued).toBeNull();
+        expect(fetchMock).toHaveBeenCalledTimes(4);
+    });
+
+    it("does not spend a token on a skipped lookup", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        await Promise.all(
+            Array.from({ length: 40 }, (_, i) =>
+                resolveVideoInfo(videoUrl(i), () => false),
+            ),
+        );
+        expect(fetchMock).not.toHaveBeenCalled();
+
+        void resolveVideoInfo(videoUrl(999));
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("gives back the token of a lookup skipped after its wait", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        await Promise.all(
+            Array.from({ length: 40 }, (_, i) => resolveVideoInfo(videoUrl(i))),
+        );
+        expect(fetchMock).toHaveBeenCalledTimes(40);
+
+        // The bucket is empty, so this lookup waits for the next token; its
+        // card goes away meanwhile.
+        let needed = true;
+        const skipped = resolveVideoInfo(videoUrl(100), () => needed);
+        await vi.advanceTimersByTimeAsync(0);
+        needed = false;
+        await vi.advanceTimersByTimeAsync(334);
+        expect(await skipped).toBeNull();
+        expect(fetchMock).toHaveBeenCalledTimes(40);
+
+        // The token it reserved is free again: the next lookup goes out at
+        // once instead of waiting for another refill.
+        void resolveVideoInfo(videoUrl(101));
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(fetchMock).toHaveBeenCalledTimes(41);
+    });
+
+    it("fetches when any caller sharing the lookup still needs it", async () => {
+        const { resolveVideoInfo } = await loadApi();
+
+        const gone = resolveVideoInfo(WATCH_URL, () => false);
+        const shown = resolveVideoInfo(WATCH_URL, () => true);
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(await gone).toEqual(expectedTracks);
+        expect(await shown).toEqual(expectedTracks);
+    });
+
+    it("looks up afresh for a caller that joins after the lookup was skipped", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        let joined: Promise<VideoInfo | null> | undefined;
+        const gone = resolveVideoInfo(WATCH_URL, () => {
+            // A second card for the same video, arriving right after the
+            // skip decision and before the shared promise has settled.
+            queueMicrotask(() => {
+                joined = resolveVideoInfo(WATCH_URL, () => true);
+            });
+            return false;
+        });
+
+        expect(await gone).toBeNull();
+        expect(await joined).toEqual(expectedTracks);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("skips when every caller sharing the lookup has gone", async () => {
+        const { resolveVideoInfo } = await loadApi();
+
+        const a = resolveVideoInfo(WATCH_URL, () => false);
+        const b = resolveVideoInfo(WATCH_URL, () => false);
+
+        expect(await a).toBeNull();
+        expect(await b).toBeNull();
         expect(fetchMock).not.toHaveBeenCalled();
     });
 });

@@ -43,12 +43,14 @@ src/
       debugging.ts                # Dev-only metrics overlay (metricsProxy)
       youtube/
         api.ts                    # resolveVideoInfo(): InnerTube request + watch-page fallback
+        filter.ts                 # "Only show my languages" switch: hides other cards
         ytcfg.ts                  # Reads the page's ytcfg (InnerTube context) from inline scripts
         thumbnails.ts             # Finds thumbnails, mounts the badge overlay when visible
         preview.ts                # Keeps the badge clickable under YouTube's hover preview
         tracks.ts                 # sortByFavorite()
         video-url.ts              # extractVideoId()
         ui/embed.ts               # Badge container and rendering
+        ui/rerender.ts            # rerenderEmbeds(): asks every embed to redraw
         ui/popup.ts               # In-page track popup
         styles/                   # SCSS for everything the content script draws
     popup/
@@ -89,7 +91,7 @@ subscribes to `Settings.enabled` with `init: true` so the stored value applies
 immediately and later toggles from the popup or any other tab are followed.
 
 `main.ts` owns the lifecycle. A single `MutationObserver` on
-`document.documentElement` hands every added element to two modules under
+`document.documentElement` hands every added element to three modules under
 `content/youtube/`, which pick out whatever in it is theirs:
 
 - **`thumbnails.ts`** - `trackThumbnailsIn(root)` finds thumbnail `<img>`s
@@ -115,22 +117,26 @@ immediately and later toggles from the popup or any other tab are followed.
   active the badge is mirrored into the preview's player box
   (`.ytbext-preview-host`) so it stays clickable. `probes/hover-check.mjs`
   is the regression check.
+- **`filter.ts`** - `mountFilterIn(root)` mounts the language filter switch
+  when `root` is or contains the header of a filterable page (see "Language
+  filter" below).
 
 `start()` and `stop()` are idempotent mirror images guarded by a `running`
 flag, and they are the only places the content script touches the page or
 subscribes to settings; no module does either at import time. `start()`
 mounts the dev metrics overlay, subscribes `rerenderEmbeds()` to the favorite
-languages and starts the observer. `stop()` disconnects the observer, drops
-that subscription, closes the in-page popup, calls `stopPreviews()` and
-`stopThumbnails()` (which disconnect their own observers, remove preview
-hosts, unwrap every `.ytbext-thumbnail-wrapper` and strip the
-`data-ytbext-processed` markers) and removes the overlay. The page is left as
-if the extension were not installed; a later `start()` re-scans from scratch,
-which is cheap thanks to the cache. `initEmbed()` checks
-`container.isConnected` after its lookup resolves, so a request that was in
-flight during `stop()` renders nothing. `probes/toggle-check.mjs` (headless
-Edge) and `probes/toggle-check-firefox.mjs` (headless Firefox) are the
-regression checks for this cycle.
+languages, starts the observer and calls `startFilter()`. `stop()`
+disconnects the observer, drops that subscription, closes the in-page popup,
+calls `stopFilter()`, `stopPreviews()` and `stopThumbnails()` (which
+disconnect their own observers, remove preview hosts, unwrap every
+`.ytbext-thumbnail-wrapper` and strip the `data-ytbext-processed` markers)
+and removes the overlay. The page is left as if the extension were not
+installed; a later `start()` re-scans from scratch, which is cheap thanks to
+the cache. `initEmbed()` checks `container.isConnected` after its lookup
+resolves, so a request that was in flight during `stop()` renders nothing.
+`probes/toggle-check.mjs` (headless Edge) and
+`probes/toggle-check-firefox.mjs` (headless Firefox) are the regression
+checks for this cycle.
 
 ### ytcfg reader (`content/youtube/ytcfg.ts`)
 
@@ -200,12 +206,32 @@ appears in several thumbnails at once.
   first `};` is not enough: JSON strings do not escape `}`, so a video
   description containing code truncated the capture and the video rendered as
   unavailable. `tests/api.test.ts` covers both paths with a stubbed `fetch`.
-- Both paths go through `p-limit(4)` with a 30-second `AbortSignal.timeout`.
-  A 429 from either source starts a global 5-minute backoff
-  (`RATE_LIMIT_COOLDOWN_MS`) during which every fetch short-circuits to
-  `null`. `shouldSkipFetch()` (backoff, or `Settings.enabled` false) is
-  re-checked inside the `p-limit` task, so requests already queued when the
-  user turns the extension off never go out.
+- Both paths go through `p-limit(4)` with a 30-second `AbortSignal.timeout`,
+  and a token bucket (`BUCKET_CAPACITY` 40, refilled at three per second)
+  caps the sustained request rate. The numbers follow human demand, which is
+  bursty: a page load plus a couple of scroll steps on the home grid fit in
+  the burst, and 3/s keeps up with someone skimming, so the limit is
+  invisible in normal browsing while bounding the worst case to ~180 a
+  minute. The bucket is charged inside the fetch tasks, after the cache
+  read, so cache hits are free. Waiters may drive the balance negative; each
+  one reserves the next refilled token, which lines concurrent waiters up
+  instead of releasing them together. A 429 from either source starts a
+  global 5-minute backoff (`RATE_LIMIT_COOLDOWN_MS`) during which every
+  fetch short-circuits to `null`. `shouldSkipFetch()` (backoff,
+  `Settings.enabled` false, or the caller's `stillNeeded` answering false)
+  is re-checked inside the `p-limit` task and again after the token wait,
+  so requests already queued when the user turns the extension off never go
+  out. A lookup skipped after its wait hands its token back
+  (`releaseToken()`), so it does not delay the next one.
+- `resolveVideoInfo(url, stillNeeded)` asks `stillNeeded()` right before a
+  request goes out, not when the lookup is queued. After a fast scroll the
+  queue is full of cards YouTube has since recycled, and a skipped lookup
+  costs no token and hands its turn to the next one. `initEmbed()` answers
+  with `container.isConnected`. Callers sharing one in-flight lookup (the
+  same video in two cards) each contribute a predicate and the fetch is
+  skipped only when all of them say no. A caller that joins in the moments
+  between that skip and the shared promise settling would get the skipped
+  null; it looks the video up afresh instead (`InFlight.abandoned`).
 - A `null` result means "unavailable": no video id, rate limited, fetch
   failed, or `playabilityStatus` is not `OK` (private, age-gated,
   region-blocked). Callers must not render this as "0 tracks".
@@ -232,8 +258,10 @@ appears in several thumbnails at once.
   every favorites change), followed by a `+N` count of the rest. Tooltips are
   pure CSS (`.ytbext-tooltip` / `.ytbext-tooltip__text`).
 - Each embed container listens for the `ytbext:render` DOM event;
-  `rerenderEmbeds()` dispatches it to every container, and `main.ts`
-  subscribes that to `Settings.langCodes` in `start()`.
+  `rerenderEmbeds()` (`ui/rerender.ts`, a module of its own because both
+  `main.ts` and `filter.ts` call it while `embed.ts` imports `filter.ts`)
+  dispatches it to every container, and `main.ts` subscribes that to
+  `Settings.langCodes` in `start()`.
 - `showTrackPopup()` toggles: clicking the badge that opened the popup closes
   it, clicking another badge switches to it. The popup also closes on outside
   click, Escape and scroll; those three listeners are registered when a popup
@@ -245,6 +273,104 @@ appears in several thumbnails at once.
   down, the popup included. It is deliberately an action button rather than a
   switch: in-page UI exists only while the extension is on, so there is no
   in-page way back, and the tooltip points to the toolbar icon.
+
+## Language filter (`content/youtube/filter.ts`)
+
+An "Only show my languages" switch (the SubPeek logo, a label and a `role="switch"`
+checkbox, styled like the on/off switch in the toolbar popup) on search
+results and channel Videos tabs. While it is on, every card whose video has
+no human caption or dub in a favorite language is hidden
+(`hasFavoriteTrack()` in `tracks.ts`, the same rule the badges highlight).
+It is a switch rather than a chip-styled button because its neighbours are
+single-select chips (All / Shorts, Latest / Popular): a chip would read as one
+more exclusive option, a switch reads as an independent on/off, and the
+toolbar popup already uses one.
+
+- Placement is per page (`PLACEMENTS`: path pattern, anchor selector,
+  position). The label sits in a `.ytbext-filter-host` wrapper that does the
+  layout for each spot, so the label itself stays a compact inline box. On
+  search results the wrapper is a row of its own right after
+  `#header.ytd-search`, not inside it: YouTube gives that header a fixed
+  height, so a second row in there is covered by the results. The row takes
+  the header's `max-width` (1250px, `$search-column-max-width`) with auto
+  margins so it stays aligned with the header and the results column when
+  YouTube centres them on wide screens; the probe checks that at 2400px. On
+  a channel Videos tab the wrapper is appended to the chip bar
+  (`chip-bar-view-model` under `#header.ytd-rich-grid-renderer`), a flex row
+  with free space on the right; the home feed uses the same grid, which is
+  why the path is checked too. The anchors carry Polymer's scope class
+  (`#header.ytd-search`) because result cards have `#header` divs of their
+  own (the "Summary" box on search results matched a bare
+  `ytd-search #header`).
+- YouTube builds these headers asynchronously and re-creates or reuses them
+  across SPA navigations (`ytd-browse` is shared by the home feed and channel
+  pages), so mounting is driven by the added-nodes observer in `main.ts`
+  (`mountFilterIn(node)`) as well as by `yt-navigate-finish`. The mounted
+  anchor is remembered so a reused header is not given a second switch.
+
+- The filter makes no lookups of its own. `initEmbed()` calls
+  `applyCardFilter(container, info)` as part of every render, so the filter
+  reuses the badge lookups (visible thumbnails only) and follows favorites
+  changes through the same `ytbext:render` event. Toggling dispatches that
+  event to every container. An earlier version scanned the whole DOM and
+  fetched every card, offscreen ones included; the token bucket in `api.ts`
+  exists because of that, and the piggyback design makes the filter cost no
+  extra requests at all.
+- Each card carries one state attribute, `data-ytbext-filter`: `"pending"`
+  from the moment `thumbnails.ts` tracks its thumbnail (`markCardPending()`
+  in `trackThumbnailsIn()`), then `"shown"` or `"hidden"` once the video is
+  known. The states take effect only under the root class
+  `ytbext-filtering`, which is on `<html>` while the switch is on. A pending
+  card is then an invisible placeholder that keeps its space
+  (`visibility: hidden`, with a fade when it changes): it still scrolls into
+  view and gets its lookup, YouTube's continuation sentinel still sits where
+  it always does so more results load, and content appears only once the
+  video is known to match, while a non-match collapses before anyone saw it.
+  That is what stops cards from flashing and vanishing as lookups resolve.
+  `visibility` rather than `opacity` because an invisible card must not
+  react to hover or clicks. The mark is written at tracking time rather than
+  when the lookup starts because YouTube renders cards below the fold ahead
+  of time, and a card that only became a placeholder once visible would
+  paint first. Pending is an explicit state rather than the absence of one
+  so that a card the extension never tracks (a Short as a
+  `ytd-video-renderer` linking to `/shorts/`, a playlist lockup) is left
+  visible instead of becoming a placeholder that never resolves.
+  `initEmbed()` calls `clearCardFilter()` before its lookup (YouTube
+  recycles cards, and one must not keep the state of the video it held
+  before) and `applyCardFilter()` after it. A `null` lookup marks the card
+  shown: hiding it would be a guess. The state is written whether or not the
+  switch is on, because a card whose lookup failed registers no render
+  listener and would otherwise stay a placeholder when the switch is turned
+  on later; for the same reason, turning the switch off marks hidden cards
+  shown rather than clearing them, and only `stopFilter()` strips every
+  mark.
+- A muted "N hidden" count follows the switch while it is on, "0 hidden"
+  included, so the filter is visibly active before anything is hidden. It
+  is a DOM count of `[data-ytbext-filter="hidden"]`, refreshed at most once
+  per microtask and only while the switch is on, so it stays right when
+  YouTube drops a hidden card, costs one query per batch of renders rather
+  than one per card, and costs nothing on the pages where cards get their
+  marks but the switch never exists. The count's span is always rendered,
+  empty while the switch is off: a live region announces changes, not its
+  own arrival, so it has to exist before the first "0 hidden".
+- The filter starts off on every page load, and `yt-navigate-finish` turns it
+  off again (showing every card), removes the switch and mounts a fresh one
+  if the new page is filterable. `stopFilter()` turns it off and removes the
+  switch. State is not persisted: the switch is the only source of truth.
+- The card to hide is the closest `ytd-rich-item-renderer`,
+  `ytd-video-renderer` or `yt-lockup-view-model`, outermost first, because on
+  a channel grid the lockup sits inside a rich item and hiding only the
+  lockup leaves an empty cell; the placeholder rule in `_filter.scss` skips
+  nested lockups for the same reason, since `visibility` is inherited. The
+  hidden state sets `display: none` with `!important`, since YouTube's
+  components set `display` themselves.
+- `probes/filter-check.mjs` is the regression check, covering both
+  placements and saving screenshots of them to `.temp/filter-check-*.png`.
+  It searches for "mrbeast reaction" with Thai as the only favorite, because
+  that splits the results: MrBeast dubs his videos into Thai, the reaction
+  channels do not, and YouTube does not auto-dub into it. Auto-dubs count as
+  dubs, so a language YouTube auto-dubs into (Korean, say) shows up on nearly
+  every card and makes the check meaningless.
 
 ## Settings and storage (`src/common/`)
 
@@ -325,11 +451,14 @@ Three layers, from fastest to slowest:
    `https://www.youtube.com/`, and `fake-indexeddb` backs the cache tests.
    Covered: `balancedObject()` and the ytcfg reader, `extractVideoId()`,
    `resolveVideoInfo()` over synthetic InnerTube replies and watch pages
-   (including the truncation case above, rate limiting and in-flight
-   de-duplication), `sortByFavorite()`, the settings wrapper, the message
-   protocol, the cache TTL and its schema upgrade, badge rendering and
-   re-sorting, the in-page track popup, the language search and sort, and the
-   settings popup rendered end to end. Modules with state (settings, cache,
+   (including the truncation case above, rate limiting, the token bucket
+   under fake timers and in-flight de-duplication), `sortByFavorite()` and
+   `hasFavoriteTrack()`, the settings wrapper, the message protocol, the
+   cache TTL and its schema upgrade, badge rendering, re-sorting and card
+   hiding, the filter switch (placement, navigation reset, restore on stop),
+   thumbnail tracking (the pending mark on tracked cards only), the in-page
+   track popup, the language search and sort, and the settings popup
+   rendered end to end. Modules with state (settings, cache,
    embeds) are re-imported per test with `vi.resetModules()`.
 2. **Browser probes** (`npm run probe:<name>`, `probes/`). Each drives the
    built extension in a headless browser against the real youtube.com and
@@ -337,14 +466,15 @@ Three layers, from fastest to slowest:
    protocol) or Firefox (via WebDriver BiDi) and network access, so they are
    not part of CI.
 
-    | Probe            | Checks                                                                  |
-    | ---------------- | ----------------------------------------------------------------------- |
-    | `toggle`         | Off tears down every node and observer; on brings badges back once each |
-    | `toggle:firefox` | The same teardown on Firefox                                            |
-    | `hover`          | The badge stays clickable under YouTube's hover preview                 |
-    | `messaging`      | Gear button opens the options page; a second load is served from cache  |
-    | `search-keys`    | Keyboard handling in the popup's language search                        |
-    | `origin`         | The original audio track is hidden from the dub list, not the default   |
+    | Probe            | Checks                                                                                                    |
+    | ---------------- | --------------------------------------------------------------------------------------------------------- |
+    | `toggle`         | Off tears down every node and observer; on brings badges back once each                                   |
+    | `toggle:firefox` | The same teardown on Firefox                                                                              |
+    | `hover`          | The badge stays clickable under YouTube's hover preview                                                   |
+    | `messaging`      | Gear button opens the options page; a second load is served from cache                                    |
+    | `search-keys`    | Keyboard handling in the popup's language search                                                          |
+    | `origin`         | The original audio track is hidden from the dub list, not the default                                     |
+    | `filter`         | The switch sits in both headers, hides the right cards, resets on navigation, stays in the request budget |
 
 3. **Manual checks**: build, load `.output/chrome-mv3/` (or
    `.output/firefox-mv2/`) unpacked and watch the console for `[SubPeek]`

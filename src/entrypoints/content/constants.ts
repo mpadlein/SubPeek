@@ -32,6 +32,19 @@ export const CSS = {
     POPUP_HEADER_ACTION: `${CSS_PREFIX}-popup__header-action`,
     POPUP_HEADER_ACTION_DANGER: `${CSS_PREFIX}-popup__header-action--danger`,
 
+    // Language filter switch and the cards it hides
+    FILTER_HOST: `${CSS_PREFIX}-filter-host`,
+    FILTER_HOST_ROW: `${CSS_PREFIX}-filter-host--row`,
+    FILTER_HOST_INLINE: `${CSS_PREFIX}-filter-host--inline`,
+    FILTER: `${CSS_PREFIX}-filter`,
+    FILTER_LOGO: `${CSS_PREFIX}-filter__logo`,
+    FILTER_LABEL: `${CSS_PREFIX}-filter__label`,
+    FILTER_INPUT: `${CSS_PREFIX}-filter__input`,
+    FILTER_TRACK: `${CSS_PREFIX}-filter__track`,
+    FILTER_COUNT: `${CSS_PREFIX}-filter__count`,
+    // On the root element while the switch is on
+    FILTERING: `${CSS_PREFIX}-filtering`,
+
     // Modifiers
     MOD_FAVORITE: "is-favorite",
     MOD_TOP: "is-top",

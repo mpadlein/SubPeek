@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeBrowser } from "wxt/testing/fake-browser";
 
 const mocks = vi.hoisted(() => ({
-    resolveVideoInfo: vi.fn<() => Promise<VideoInfo | null>>(),
+    resolveVideoInfo:
+        vi.fn<
+            (
+                url: string,
+                stillNeeded?: () => boolean,
+            ) => Promise<VideoInfo | null>
+        >(),
 }));
 vi.mock("@/entrypoints/content/youtube/api", () => ({
     resolveVideoInfo: mocks.resolveVideoInfo,
@@ -36,7 +42,9 @@ async function loadEmbed(favorites: string[]) {
     const { Settings } = await import("@/common/settings");
     await Settings.ready();
     const embed = await import("@/entrypoints/content/youtube/ui/embed");
-    Settings.langCodes.subscribe(embed.rerenderEmbeds);
+    const { rerenderEmbeds } =
+        await import("@/entrypoints/content/youtube/ui/rerender");
+    Settings.langCodes.subscribe(rerenderEmbeds);
     return embed;
 }
 
@@ -119,6 +127,19 @@ describe("initEmbed", () => {
         expect(container.childElementCount).toBe(0);
     });
 
+    it("tells the lookup it is no longer needed once the container is gone", async () => {
+        const { createEmbedContainer, initEmbed } = await loadEmbed(["en"]);
+        mocks.resolveVideoInfo.mockReturnValueOnce(new Promise(() => {}));
+        const container = createEmbedContainer(VIDEO_URL);
+        document.body.appendChild(container);
+        void initEmbed(container, VIDEO_URL);
+        const [, stillNeeded] = mocks.resolveVideoInfo.mock.calls[0]!;
+
+        expect(stillNeeded?.()).toBe(true);
+        container.remove();
+        expect(stillNeeded?.()).toBe(false);
+    });
+
     it("opens the track popup for the clicked section", async () => {
         const container = await mount(["en"]);
 
@@ -127,5 +148,111 @@ describe("initEmbed", () => {
         expect(
             document.querySelector(".ytbext-popup")?.getAttribute("aria-label"),
         ).toBe("Subtitle languages");
+    });
+});
+
+describe("initEmbed with the language filter", () => {
+    const filterSwitch = () =>
+        document.querySelector<HTMLInputElement>(".ytbext-filter__input")!;
+    const stateOf = (card: HTMLElement) =>
+        card.getAttribute("data-ytbext-filter");
+    const isHidden = (card: HTMLElement) => stateOf(card) === "hidden";
+
+    /** Starts the filter on a search page, turned on, and mounts one card. */
+    async function mountFiltered(favorites: string[]) {
+        const embed = await loadEmbed(favorites);
+        const filter = await import("@/entrypoints/content/youtube/filter");
+        history.replaceState(null, "", "/results?search_query=x");
+        document.body.innerHTML =
+            '<ytd-search><div id="header" class="ytd-search"></div></ytd-search>';
+        filter.startFilter();
+        filterSwitch().click();
+
+        const card = document.createElement("ytd-video-renderer");
+        card.innerHTML = `<a href="/watch?v=abc"><div class="ytbext-thumbnail-wrapper"><img src="x.jpg"></div></a>`;
+        document.body.appendChild(card);
+        const container = embed.createEmbedContainer(VIDEO_URL);
+        card.querySelector(".ytbext-thumbnail-wrapper")!.appendChild(container);
+        await embed.initEmbed(container, VIDEO_URL);
+        return { card, filter };
+    }
+
+    it("hides the card when the video has no favorite track", async () => {
+        const { card, filter } = await mountFiltered(["ko"]);
+
+        expect(isHidden(card)).toBe(true);
+        filter.stopFilter();
+    });
+
+    it("keeps the card when the video has a favorite track", async () => {
+        const { card, filter } = await mountFiltered(["fr"]);
+
+        expect(isHidden(card)).toBe(false);
+        filter.stopFilter();
+    });
+
+    it("follows a favorites change", async () => {
+        const { card, filter } = await mountFiltered(["ko"]);
+        expect(isHidden(card)).toBe(true);
+
+        await fakeBrowser.storage.local.set({ "SETTINGS:langCodes": ["fr"] });
+        await flush();
+
+        expect(isHidden(card)).toBe(false);
+        filter.stopFilter();
+    });
+
+    it("shows the card again when the filter is turned off", async () => {
+        const { card, filter } = await mountFiltered(["ko"]);
+
+        filterSwitch().click();
+
+        expect(isHidden(card)).toBe(false);
+        filter.stopFilter();
+    });
+
+    it("keeps the card pending until the lookup resolves, then shows an unknown video", async () => {
+        const embed = await loadEmbed(["ko"]);
+        const filter = await import("@/entrypoints/content/youtube/filter");
+        history.replaceState(null, "", "/results?search_query=x");
+        document.body.innerHTML =
+            '<ytd-search><div id="header" class="ytd-search"></div></ytd-search>';
+        filter.startFilter();
+        filterSwitch().click();
+        let resolveLookup!: (value: VideoInfo | null) => void;
+        mocks.resolveVideoInfo.mockReturnValueOnce(
+            new Promise((resolve) => (resolveLookup = resolve)),
+        );
+        const card = document.createElement("ytd-video-renderer");
+        card.setAttribute("data-ytbext-filter", "hidden");
+        card.innerHTML = `<a href="/watch?v=abc"><div class="ytbext-thumbnail-wrapper"><img src="x.jpg"></div></a>`;
+        document.body.appendChild(card);
+        const container = embed.createEmbedContainer(VIDEO_URL);
+        card.querySelector(".ytbext-thumbnail-wrapper")!.appendChild(container);
+
+        const done = embed.initEmbed(container, VIDEO_URL);
+        expect(stateOf(card)).toBe("pending");
+
+        resolveLookup(null);
+        await done;
+
+        expect(stateOf(card)).toBe("shown");
+        filter.stopFilter();
+    });
+
+    it("shows a hidden card again when its container is re-initialised for an unknown video", async () => {
+        const { card, filter } = await mountFiltered(["ko"]);
+        expect(isHidden(card)).toBe(true);
+        const { createEmbedContainer, initEmbed } =
+            await import("@/entrypoints/content/youtube/ui/embed");
+        mocks.resolveVideoInfo.mockResolvedValueOnce(null);
+
+        // thumbnails.ts replaces the container when YouTube recycles the card.
+        const fresh = createEmbedContainer(VIDEO_URL);
+        card.querySelector(".ytbext-embed-container")!.replaceWith(fresh);
+        await initEmbed(fresh, VIDEO_URL);
+
+        expect(isHidden(card)).toBe(false);
+        filter.stopFilter();
     });
 });

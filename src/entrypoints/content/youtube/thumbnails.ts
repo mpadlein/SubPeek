@@ -1,5 +1,6 @@
 import { CSS, CSS_PREFIX } from "../constants";
 import { metricsProxy } from "../debugging";
+import { markCardPending } from "./filter";
 import { createEmbedContainer, initEmbed } from "./ui/embed";
 
 // Finds video thumbnails, waits until they scroll into view and mounts the
@@ -119,11 +120,17 @@ function findThumbnailImgs(root: ParentNode): HTMLImageElement[] {
 
 // ─── Public API ──────────────────────────────────────────────────────
 
-/** Starts tracking every thumbnail in `root` that is not tracked yet. */
+/**
+ * Starts tracking every thumbnail in `root` that is not tracked yet. The card
+ * around each one is handed to the language filter as pending right away, so
+ * it is a placeholder while the switch is on rather than a card that shows
+ * and then vanishes once its lookup resolves.
+ */
 export function trackThumbnailsIn(root: ParentNode): void {
     for (const img of findThumbnailImgs(root)) {
         if (isProcessed(img)) continue;
         markProcessed(img);
+        markCardPending(img);
         observeVisibility(img);
     }
 }

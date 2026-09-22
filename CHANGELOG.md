@@ -6,6 +6,20 @@ follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- "Only show my languages" switch on search results and channel Videos tabs.
+  While it is on, videos with no caption or dubbed audio in your favorite
+  languages are hidden and a count next to the switch says how many. It
+  reuses the lookups the badges already make, so it costs no extra requests.
+
+### Changed
+
+- Requests to YouTube are throttled to a burst of 40, then three per second,
+  on top of the existing concurrency limit and rate-limit backoff.
+- Lookups for thumbnails that scrolled away or were recycled before their
+  turn came are skipped instead of sent.
+
 ## [1.1.0] - 2026-09-16
 
 ### Added

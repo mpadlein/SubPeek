@@ -1,0 +1,158 @@
+@use "variables" as *;
+
+// Width YouTube gives the search header and the results column
+// (`#header.ytd-search` and `#primary`, both `max-width` + `margin: auto`),
+// so the row under the header lines up with them on wide screens.
+$search-column-max-width: 1250px;
+
+// The wrapper does the layout for each spot; the label inside is the switch.
+.#{$prefix}-filter-host {
+    display: flex;
+    align-items: center;
+
+    // Search results: a row of its own after the chip header, centred with
+    // the same max-width as the header and results.
+    &--row {
+        max-width: $search-column-max-width;
+        margin: $spacing-xs auto $spacing-sm;
+    }
+
+    // Channel Videos tab: right end of the chip bar's flex row.
+    &--inline {
+        margin-left: auto;
+    }
+}
+
+// The language filter switch: logo, label and a switch track, mounted into
+// YouTube's chip-row headers. Sized to the 32px chips it sits next to.
+.#{$prefix}-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-sm;
+    height: 32px;
+    padding: 0 $spacing-md;
+    border: 1px solid $border-light;
+    border-radius: $radius-lg;
+    background: $bg-item;
+    color: $color-text;
+    font-family: $font-stack;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+        background $transition-fast,
+        border-color $transition-fast;
+
+    &:hover {
+        background: $bg-hover;
+        border-color: $border-badge;
+    }
+
+    &__logo {
+        display: inline-flex;
+        flex-shrink: 0;
+    }
+
+    // Kept in the DOM (not display:none) so it keeps keyboard focus and the
+    // role=switch semantics; the track is the visual.
+    &__input {
+        position: absolute;
+        width: 0;
+        height: 0;
+        opacity: 0;
+    }
+
+    &__track {
+        position: relative;
+        display: block;
+        flex-shrink: 0;
+        width: 32px;
+        height: 18px;
+        border-radius: 9px;
+        background: $bg-hover-strong;
+        border: 1px solid $border-badge;
+        transition:
+            background $transition-fast,
+            border-color $transition-fast;
+
+        &::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 12px;
+            height: 12px;
+            border-radius: $radius-full;
+            background: $color-text-muted;
+            transition:
+                transform $transition-fast,
+                background $transition-fast;
+        }
+    }
+
+    &__input:checked + &__track {
+        background: $color-primary;
+        border-color: $color-primary;
+
+        &::after {
+            transform: translateX(14px);
+            background: $color-text;
+        }
+    }
+
+    &__input:focus-visible + &__track {
+        outline: 2px solid $color-primary;
+        outline-offset: 2px;
+    }
+
+    // "N hidden", next to the switch while it is on ("0 hidden" included);
+    // the span stays in place, empty, while it is off.
+    &__count {
+        margin-left: $spacing-sm;
+        color: $color-text-muted;
+        font-family: $font-stack;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+}
+
+// ─── Card states ─────────────────────────────────────────────────────
+//
+// filter.ts marks each card with data-ytbext-filter="pending" as soon as its
+// thumbnail is tracked, then "shown" | "hidden" once the video is known. A
+// card the extension does not track (a Short, a playlist) has no mark and is
+// left alone. The marks only take effect under the root class, which is on
+// <html> while the switch is on.
+
+$state-attr: "data-#{$prefix}-filter";
+
+// The outermost card of each layout. A lockup nested in a grid item is not a
+// card of its own: visibility is inherited, so a rule on the inner one would
+// keep it invisible after the outer one is shown.
+$cards: "ytd-rich-item-renderer, ytd-video-renderer, yt-lockup-view-model:not(ytd-rich-item-renderer *):not(ytd-video-renderer *)";
+
+.#{$prefix}-filtering {
+    :is(#{$cards}) {
+        transition:
+            opacity $transition-normal,
+            visibility $transition-normal;
+
+        // Not known yet: an invisible placeholder that keeps its space, so it
+        // still scrolls into view for its lookup and YouTube still loads more
+        // results after it. visibility rather than opacity: an invisible card
+        // must not react to hover or clicks.
+        &[#{$state-attr}="pending"] {
+            opacity: 0;
+            visibility: hidden;
+        }
+    }
+}
+
+// A card the filter hides. !important because YouTube's component styles set
+// display on these elements themselves.
+[#{$state-attr}="hidden"] {
+    display: none !important;
+}
