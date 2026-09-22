@@ -24,17 +24,20 @@ $search-column-max-width: 1250px;
 }
 
 // The language filter switch: logo, label and a switch track, mounted into
-// YouTube's chip-row headers. Sized to the 32px chips it sits next to.
+// YouTube's chip-row headers. Sized to the 32px chips it sits next to. Its
+// colours follow YouTube's theme, light by default and dark under the `dark`
+// attribute YouTube puts on <html>: unlike the badge and the popup, which
+// paint their own dark backdrop, the switch sits on the page's own surface.
 .#{$prefix}-filter {
     display: inline-flex;
     align-items: center;
     gap: $spacing-sm;
     height: 32px;
     padding: 0 $spacing-md;
-    border: 1px solid $border-light;
+    border: 1px solid $light-border;
     border-radius: $radius-lg;
-    background: $bg-item;
-    color: $color-text;
+    background: $light-bg-item;
+    color: $light-color-text;
     font-family: $font-stack;
     font-size: 14px;
     font-weight: 500;
@@ -47,8 +50,19 @@ $search-column-max-width: 1250px;
         border-color $transition-fast;
 
     &:hover {
-        background: $bg-hover;
-        border-color: $border-badge;
+        background: $light-bg-hover;
+        border-color: $light-border-strong;
+    }
+
+    html[dark] & {
+        border-color: $border-light;
+        background: $bg-item;
+        color: $color-text;
+
+        &:hover {
+            background: $bg-hover;
+            border-color: $border-badge;
+        }
     }
 
     &__logo {
@@ -72,8 +86,8 @@ $search-column-max-width: 1250px;
         width: 32px;
         height: 18px;
         border-radius: 9px;
-        background: $bg-hover-strong;
-        border: 1px solid $border-badge;
+        background: $light-bg-hover;
+        border: 1px solid $light-border-strong;
         transition:
             background $transition-fast,
             border-color $transition-fast;
@@ -86,36 +100,59 @@ $search-column-max-width: 1250px;
             width: 12px;
             height: 12px;
             border-radius: $radius-full;
-            background: $color-text-muted;
+            background: $light-color-text-muted;
             transition:
                 transform $transition-fast,
                 background $transition-fast;
         }
+
+        html[dark] & {
+            background: $bg-hover-strong;
+            border-color: $border-badge;
+
+            &::after {
+                background: $color-text-muted;
+            }
+        }
     }
 
+    // A white knob on the accent colour reads in both themes.
     &__input:checked + &__track {
-        background: $color-primary;
-        border-color: $color-primary;
+        background: $light-color-primary;
+        border-color: $light-color-primary;
 
         &::after {
             transform: translateX(14px);
             background: $color-text;
         }
+
+        html[dark] & {
+            background: $color-primary;
+            border-color: $color-primary;
+        }
     }
 
     &__input:focus-visible + &__track {
-        outline: 2px solid $color-primary;
+        outline: 2px solid $light-color-primary;
         outline-offset: 2px;
+
+        html[dark] & {
+            outline-color: $color-primary;
+        }
     }
 
     // "N hidden", next to the switch while it is on ("0 hidden" included);
     // the span stays in place, empty, while it is off.
     &__count {
         margin-left: $spacing-sm;
-        color: $color-text-muted;
+        color: $light-color-text-muted;
         font-family: $font-stack;
         font-size: 13px;
         white-space: nowrap;
+
+        html[dark] & {
+            color: $color-text-muted;
+        }
     }
 }
 

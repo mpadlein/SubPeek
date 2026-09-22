@@ -300,6 +300,23 @@ describe("resolveVideoInfo request throttle", () => {
         expect(await Promise.all(lookups)).toHaveLength(40);
     });
 
+    it("keeps refilling when the wall clock steps backwards", async () => {
+        const { resolveVideoInfo } = await loadApi();
+        await Promise.all(
+            Array.from({ length: 40 }, (_, i) => resolveVideoInfo(videoUrl(i))),
+        );
+        expect(fetchMock).toHaveBeenCalledTimes(40);
+
+        // A clock correction moves Date back a minute. Read as elapsed time,
+        // that would drain the bucket by 180 tokens and stall every lookup
+        // for a minute; the next one must still go out at the refill rate.
+        vi.setSystemTime(Date.now() - 60_000);
+        void resolveVideoInfo(videoUrl(100));
+        await vi.advanceTimersByTimeAsync(334);
+
+        expect(fetchMock).toHaveBeenCalledTimes(41);
+    });
+
     it("does not charge cache hits against the allowance", async () => {
         const { resolveVideoInfo } = await loadApi();
         cache.getCachedVideoInfo.mockResolvedValue(expectedTracks);

@@ -211,7 +211,7 @@ describe("initEmbed with the language filter", () => {
         filter.stopFilter();
     });
 
-    it("keeps the card pending until the lookup resolves, then shows an unknown video", async () => {
+    it("leaves the card pending until the lookup resolves, then shows an unknown video", async () => {
         const embed = await loadEmbed(["ko"]);
         const filter = await import("@/entrypoints/content/youtube/filter");
         history.replaceState(null, "", "/results?search_query=x");
@@ -223,8 +223,9 @@ describe("initEmbed with the language filter", () => {
         mocks.resolveVideoInfo.mockReturnValueOnce(
             new Promise((resolve) => (resolveLookup = resolve)),
         );
+        // As thumbnails.ts leaves a tracked card.
         const card = document.createElement("ytd-video-renderer");
-        card.setAttribute("data-ytbext-filter", "hidden");
+        card.setAttribute("data-ytbext-filter", "pending");
         card.innerHTML = `<a href="/watch?v=abc"><div class="ytbext-thumbnail-wrapper"><img src="x.jpg"></div></a>`;
         document.body.appendChild(card);
         const container = embed.createEmbedContainer(VIDEO_URL);
@@ -235,6 +236,32 @@ describe("initEmbed with the language filter", () => {
 
         resolveLookup(null);
         await done;
+
+        expect(stateOf(card)).toBe("shown");
+        filter.stopFilter();
+    });
+
+    it("keeps a known card's state while a further lookup in it is pending", async () => {
+        const embed = await loadEmbed(["ko"]);
+        const filter = await import("@/entrypoints/content/youtube/filter");
+        history.replaceState(null, "", "/results?search_query=x");
+        document.body.innerHTML =
+            '<ytd-search><div id="header" class="ytd-search"></div></ytd-search>';
+        filter.startFilter();
+        filterSwitch().click();
+        mocks.resolveVideoInfo.mockReturnValueOnce(new Promise(() => {}));
+        // A card whose first thumbnail already resolved.
+        const card = document.createElement("ytd-video-renderer");
+        card.setAttribute("data-ytbext-filter", "shown");
+        card.innerHTML = `<a href="/watch?v=abc"><div class="ytbext-thumbnail-wrapper"><img src="x.jpg"></div></a>`;
+        document.body.appendChild(card);
+        const container = embed.createEmbedContainer(VIDEO_URL);
+        card.querySelector(".ytbext-thumbnail-wrapper")!.appendChild(container);
+
+        // A second image in the same card mounts a container of its own;
+        // the card is still the same video, so it must not become a
+        // placeholder again.
+        void embed.initEmbed(container, VIDEO_URL);
 
         expect(stateOf(card)).toBe("shown");
         filter.stopFilter();

@@ -52,10 +52,13 @@ const FETCH_TIMEOUT_MS = 30_000;
 const BUCKET_CAPACITY = 40;
 const REFILL_PER_MS = 3 / 1000;
 let tokens = BUCKET_CAPACITY;
-let lastRefill = Date.now();
+// performance.now() rather than Date.now(): the refill is elapsed time, and
+// the wall clock can step backwards (an NTP correction), which would read as
+// a huge negative refill and stall every lookup for as long as the step.
+let lastRefill = performance.now();
 
 function refillBucket(): void {
-    const now = Date.now();
+    const now = performance.now();
     tokens = Math.min(
         BUCKET_CAPACITY,
         tokens + (now - lastRefill) * REFILL_PER_MS,

@@ -1,6 +1,6 @@
 import { CSS, CSS_PREFIX } from "../constants";
 import { metricsProxy } from "../debugging";
-import { markCardPending } from "./filter";
+import { clearCardFilter, markCardPending } from "./filter";
 import { createEmbedContainer, initEmbed } from "./ui/embed";
 
 // Finds video thumbnails, waits until they scroll into view and mounts the
@@ -66,6 +66,8 @@ const srcObserver = new MutationObserver((mutations) => {
 
         const newContainer = createEmbedContainer(videoUrl);
         container.replaceWith(newContainer);
+        // The card must not keep the filter state of the video it held.
+        clearCardFilter(newContainer);
         void initEmbed(newContainer, videoUrl);
     }
 });

@@ -5,6 +5,22 @@ vi.mock("@/entrypoints/content/youtube/api", () => ({
     resolveVideoInfo: vi.fn(() => new Promise(() => {})),
 }));
 
+// thumbnails.ts mounts the overlay from its IntersectionObserver callback;
+// hand the module a fake whose callback a test can fire by hand.
+type Intersection = (entries: Partial<IntersectionObserverEntry>[]) => void;
+const intersections: Intersection[] = [];
+vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+        constructor(callback: Intersection) {
+            intersections.push(callback);
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+    },
+);
+
 const STATE_ATTR = "data-ytbext-filter";
 const stateOf = (id: string) =>
     document.getElementById(id)!.getAttribute(STATE_ATTR);
@@ -50,6 +66,43 @@ describe("trackThumbnailsIn", () => {
 
         expect(stateOf("short")).toBeNull();
         expect(stateOf("list")).toBeNull();
+        stopThumbnails();
+    });
+
+    it("leaves a known card alone when another thumbnail in it is tracked", async () => {
+        const { trackThumbnailsIn, stopThumbnails } = await loadThumbnails();
+        document.body.innerHTML = card("video", "/watch?v=abc");
+        trackThumbnailsIn(document);
+        const known = document.getElementById("video")!;
+        known.setAttribute(STATE_ATTR, "shown");
+
+        // YouTube adds a second image under the same watch link (a hover
+        // asset, say); the card's video has not changed.
+        known
+            .querySelector("a > div")!
+            .insertAdjacentHTML("beforeend", '<img src="hover.jpg">');
+        trackThumbnailsIn(document);
+
+        expect(stateOf("video")).toBe("shown");
+        stopThumbnails();
+    });
+
+    it("puts a recycled card back to pending when its video changes", async () => {
+        const { trackThumbnailsIn, stopThumbnails } = await loadThumbnails();
+        document.body.innerHTML = card("video", "/watch?v=abc");
+        trackThumbnailsIn(document);
+        const img = document.querySelector("img")!;
+        intersections.at(-1)!([{ target: img, isIntersecting: true }]);
+        const known = document.getElementById("video")!;
+        known.setAttribute(STATE_ATTR, "hidden");
+
+        // YouTube reuses the card for another video: the anchor's href and
+        // the image's src change, the elements stay put.
+        known.querySelector("a")!.setAttribute("href", "/watch?v=xyz");
+        img.setAttribute("src", "xyz.jpg");
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(stateOf("video")).toBe("pending");
         stopThumbnails();
     });
 

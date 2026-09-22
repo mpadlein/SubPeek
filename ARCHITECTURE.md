@@ -208,7 +208,9 @@ appears in several thumbnails at once.
   unavailable. `tests/api.test.ts` covers both paths with a stubbed `fetch`.
 - Both paths go through `p-limit(4)` with a 30-second `AbortSignal.timeout`,
   and a token bucket (`BUCKET_CAPACITY` 40, refilled at three per second)
-  caps the sustained request rate. The numbers follow human demand, which is
+  caps the sustained request rate. The refill is clocked by
+  `performance.now()`, since a wall-clock step backwards would read as a
+  large negative refill and stall every lookup. The numbers follow human demand, which is
   bursty: a page load plus a couple of scroll steps on the home grid fit in
   the burst, and 3/s keeps up with someone skimming, so the limit is
   invisible in normal browsing while bounding the worst case to ~180 a
@@ -335,10 +337,14 @@ toolbar popup already uses one.
   so that a card the extension never tracks (a Short as a
   `ytd-video-renderer` linking to `/shorts/`, a playlist lockup) is left
   visible instead of becoming a placeholder that never resolves.
-  `initEmbed()` calls `clearCardFilter()` before its lookup (YouTube
-  recycles cards, and one must not keep the state of the video it held
-  before) and `applyCardFilter()` after it. A `null` lookup marks the card
-  shown: hiding it would be a guess. The state is written whether or not the
+  The state belongs to the card, which can hold more than one thumbnail, so
+  `markCardPending()` leaves a card that already has a state alone: a second
+  image YouTube adds to a known card is not a new video, and turning the
+  card back into a placeholder would leave it invisible if that image never
+  scrolls into view. Only a recycled card is reset: `thumbnails.ts` calls
+  `clearCardFilter()` when it replaces the container of a card whose video
+  changed. `initEmbed()` calls `applyCardFilter()` after its lookup. A
+  `null` lookup marks the card shown: hiding it would be a guess. The state is written whether or not the
   switch is on, because a card whose lookup failed registers no render
   listener and would otherwise stay a placeholder when the switch is turned
   on later; for the same reason, turning the switch off marks hidden cards
@@ -422,6 +428,13 @@ that needs updating.
 - `.ytbext-thumbnail-wrapper` is a `container-type: inline-size` root; the
   badge container scales with `@container` queries on thumbnail width. Those
   queries set the browser floor (Chrome 105, Firefox 110).
+- The badge and the in-page popup paint their own dark backdrop, so the
+  colour tokens in `_variables.scss` are dark-theme values. The language
+  filter switch is the one element drawn on YouTube's own surface and it
+  follows YouTube's theme instead: light by default, from the `$light-*`
+  tokens, and the dark values under `html[dark]`, the attribute YouTube puts
+  on the root element in dark mode. `probes/filter-check.mjs` checks the
+  label's contrast in both themes.
 - Popup styles are plain CSS in `popup/style.css` using the Inter font
   bundled in `public/fonts/`.
 
@@ -456,7 +469,7 @@ Three layers, from fastest to slowest:
    `hasFavoriteTrack()`, the settings wrapper, the message protocol, the
    cache TTL and its schema upgrade, badge rendering, re-sorting and card
    hiding, the filter switch (placement, navigation reset, restore on stop),
-   thumbnail tracking (the pending mark on tracked cards only), the in-page
+   thumbnail tracking (the pending mark on tracked cards only, kept on a known card, reset on recycle), the in-page
    track popup, the language search and sort, and the settings popup
    rendered end to end. Modules with state (settings, cache,
    embeds) are re-imported per test with `vi.resetModules()`.
@@ -466,15 +479,15 @@ Three layers, from fastest to slowest:
    protocol) or Firefox (via WebDriver BiDi) and network access, so they are
    not part of CI.
 
-    | Probe            | Checks                                                                                                    |
-    | ---------------- | --------------------------------------------------------------------------------------------------------- |
-    | `toggle`         | Off tears down every node and observer; on brings badges back once each                                   |
-    | `toggle:firefox` | The same teardown on Firefox                                                                              |
-    | `hover`          | The badge stays clickable under YouTube's hover preview                                                   |
-    | `messaging`      | Gear button opens the options page; a second load is served from cache                                    |
-    | `search-keys`    | Keyboard handling in the popup's language search                                                          |
-    | `origin`         | The original audio track is hidden from the dub list, not the default                                     |
-    | `filter`         | The switch sits in both headers, hides the right cards, resets on navigation, stays in the request budget |
+    | Probe            | Checks                                                                                                                               |
+    | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+    | `toggle`         | Off tears down every node and observer; on brings badges back once each                                                              |
+    | `toggle:firefox` | The same teardown on Firefox                                                                                                         |
+    | `hover`          | The badge stays clickable under YouTube's hover preview                                                                              |
+    | `messaging`      | Gear button opens the options page; a second load is served from cache                                                               |
+    | `search-keys`    | Keyboard handling in the popup's language search                                                                                     |
+    | `origin`         | The original audio track is hidden from the dub list, not the default                                                                |
+    | `filter`         | The switch sits in both headers, hides the right cards, resets on navigation, stays in the request budget, is legible in both themes |
 
 3. **Manual checks**: build, load `.output/chrome-mv3/` (or
    `.output/firefox-mv2/`) unpacked and watch the console for `[SubPeek]`

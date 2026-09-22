@@ -131,20 +131,25 @@ export function applyCardFilter(
  * while the switch is on. thumbnails.ts calls it as soon as it tracks the
  * thumbnail, before that scrolls into view: YouTube renders cards below the
  * fold ahead of time, and one that only became a placeholder when its lookup
- * started would show for a moment first.
+ * started would show for a moment first. A card that already has a state
+ * keeps it: the state is per card, and a further image tracked in a known
+ * card (a hover asset YouTube adds later) is not a new video, so it must not
+ * turn the card back into a placeholder, which nothing would resolve if that
+ * image never scrolls into view.
  */
 export function markCardPending(el: HTMLElement): void {
     const card = cardOf(el);
-    if (card) setCardState(card, "pending");
+    if (card && !card.hasAttribute(STATE_ATTR)) setCardState(card, "pending");
 }
 
 /**
- * Puts the card back to "not known yet". embed.ts calls it before every
- * lookup: YouTube recycles cards, and one must not keep the state of the
- * video it held before.
+ * Puts the card back to "not known yet", whatever it was. thumbnails.ts
+ * calls it when YouTube recycles a card for another video, since the card
+ * must not keep the state of the video it held before.
  */
 export function clearCardFilter(container: HTMLElement): void {
-    markCardPending(container);
+    const card = cardOf(container);
+    if (card) setCardState(card, "pending");
     queueCountUpdate();
 }
 

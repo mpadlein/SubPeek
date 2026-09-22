@@ -5,7 +5,7 @@ import { html, nothing, render, type TemplateResult } from "lit-html";
 import { classMap } from "lit-html/directives/class-map.js";
 import { CSS, EVENT } from "../../constants";
 import { resolveVideoInfo } from "../api";
-import { applyCardFilter, clearCardFilter } from "../filter";
+import { applyCardFilter } from "../filter";
 import { badgeTracks, sortByFavorite } from "../tracks";
 import { showTrackPopup } from "./popup";
 
@@ -147,16 +147,16 @@ async function lookupTracks(
  * that looks identical to a video with no captions.
  *
  * The language filter rides along: the card is a placeholder while the
- * lookup is pending, and every render hands it to applyCardFilter(), which
- * hides it while the filter is on and the video has no favorite track.
+ * lookup is pending (thumbnails.ts marks it so when it tracks the thumbnail,
+ * and again when YouTube recycles the card for another video), and every
+ * render hands it to applyCardFilter(), which hides it while the filter is
+ * on and the video has no favorite track. Nothing is reset here: a card can
+ * hold more than one container, and the state belongs to the card.
  */
 export async function initEmbed(
     container: HTMLElement,
     videoUrl: string,
 ): Promise<void> {
-    // A recycled card may still carry the state of the video it held before.
-    clearCardFilter(container);
-
     const info = await lookupTracks(container, videoUrl);
 
     // The container may have been torn down while the lookup was pending

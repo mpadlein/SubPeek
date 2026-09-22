@@ -26,6 +26,17 @@ $border-light: rgba(255, 255, 255, 0.1);
 $border-lighter: rgba(255, 255, 255, 0.05);
 $border-badge: rgba(255, 255, 255, 0.2);
 
+// Light theme. Only the language filter switch needs these: it sits on
+// YouTube's own surface, while the badge and the popup paint their own dark
+// backdrop. YouTube marks dark mode with a bare `dark` attribute on <html>.
+$light-color-text: #0f0f0f;
+$light-color-text-muted: #606060;
+$light-color-primary: #065fd4;
+$light-bg-item: rgba(0, 0, 0, 0.05);
+$light-bg-hover: rgba(0, 0, 0, 0.1);
+$light-border: rgba(0, 0, 0, 0.1);
+$light-border-strong: rgba(0, 0, 0, 0.2);
+
 // Spacing
 $spacing-xs: 4px;
 $spacing-sm: 8px;

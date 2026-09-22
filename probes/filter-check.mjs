@@ -1,5 +1,5 @@
-// Pass/fail check for the language filter: on a search page the "My
-// languages" switch must sit in a row after the chip header, start off, hide
+// Pass/fail check for the language filter: on a search page the "Only show
+// my languages" switch must sit in a row after the chip header, start off, hide
 // exactly the cards whose badges show no favorite track, keep every card
 // whose video is not known yet as an invisible placeholder (so nothing flashes
 // and vanishes) while YouTube still loads more results, keep doing so for
@@ -7,8 +7,10 @@
 // on YouTube's SPA navigation, and disappear on a watch page. On a channel
 // Videos tab it must sit in the chip bar and work the same way. It also
 // checks that the content script's player requests stay within the token
-// bucket (40 at once, then three per second), and saves screenshots of both
-// placements to .temp/filter-check-*.png for a visual check.
+// bucket (40 at once, then three per second), that the switch is legible in
+// YouTube's dark and light themes, and saves screenshots of both placements
+// (and the light-theme search page) to .temp/filter-check-*.png for a
+// visual check.
 //
 // Usage: node probes/filter-check.mjs [url] [langCode]
 // The defaults search "mrbeast reaction" with Thai as the favorite: MrBeast
@@ -159,6 +161,40 @@ const FILTER_SNAPSHOT = `(() => {
     return { control: !!control, host, after, on, filtering, count, cards: cards.length, hidden, rendered, withFavorite, mismatches, placeholders, badPlaceholders, untracked, wrongState, path: location.pathname + location.search };
 })()`;
 
+// The switch sits on YouTube's own surface (the badge and the popup paint
+// their own dark backdrop), so its colours have to follow YouTube's theme:
+// a `dark` attribute on <html>, set from prefers-color-scheme while signed
+// out. `bg` is the first opaque background behind the switch, `text` the
+// label's colour; the two are checked for WCAG AA contrast.
+const THEME_SNAPSHOT = `(() => {
+    const control = document.querySelector('.ytbext-filter');
+    const label = control.querySelector('.ytbext-filter__label');
+    let el = control.parentElement, bg = null;
+    while (el && !bg) {
+        const c = getComputedStyle(el).backgroundColor;
+        if (c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') bg = c;
+        el = el.parentElement;
+    }
+    return { dark: document.documentElement.hasAttribute('dark'), text: getComputedStyle(label).color, bg };
+})()`;
+const luminance = (css) => {
+    const channel = (c) => {
+        c /= 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    const [r, g, b] = css
+        .match(/[\d.]+/g)
+        .slice(0, 3)
+        .map(Number);
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+};
+const contrast = ({ text, bg }) => {
+    if (!text || !bg) return 0;
+    const [hi, lo] = [luminance(text), luminance(bg)].sort((a, b) => b - a);
+    return (hi + 0.05) / (lo + 0.05);
+};
+const MIN_CONTRAST = 4.5;
+
 try {
     const cdp = await connect();
 
@@ -249,6 +285,13 @@ try {
         deviceScaleFactor: 1,
         mobile: false,
     });
+    // Pinned rather than left to the machine's setting; the light theme
+    // gets a page load of its own at the end.
+    const setTheme = (value) =>
+        send("Emulation.setEmulatedMedia", {
+            features: [{ name: "prefers-color-scheme", value }],
+        });
+    await setTheme("dark");
 
     // Timestamps of the player requests the content script makes (initiator
     // stack in the extension bundle), for the token-bucket check. A full page
@@ -336,6 +379,12 @@ try {
     check(
         "nothing hidden while off, and no count shown",
         initial.hidden === 0 && initial.count === null,
+    );
+    const dark = await evaluate(THEME_SNAPSHOT);
+    check(
+        "dark theme: the label is legible on the page",
+        dark.dark && contrast(dark) >= MIN_CONTRAST,
+        `${dark.text} on ${dark.bg}, ${contrast(dark).toFixed(1)}:1`,
     );
     if (
         initial.withFavorite === 0 ||
@@ -545,6 +594,23 @@ try {
         `hidden=${channelOn.hidden} count="${channelOn.count}" rendered=${channelOn.rendered} withFavorite=${channelOn.withFavorite}`,
     );
     await screenshot("channel");
+
+    // ── Light theme: a fresh page load with the switch on a white header ──
+    await setTheme("light");
+    await send("Page.navigate", { url: URL_ });
+    const lightReady = await waitFor(
+        `!!document.querySelector('.ytbext-filter') && !document.documentElement.hasAttribute('dark')`,
+        30000,
+    );
+    await sleep(1000);
+    const light = lightReady ? await evaluate(THEME_SNAPSHOT) : {};
+    check("light theme: page loaded in the light theme", lightReady);
+    check(
+        "light theme: the label is legible on the page",
+        contrast(light) >= MIN_CONTRAST,
+        `${light.text} on ${light.bg}, ${contrast(light).toFixed(1)}:1`,
+    );
+    await screenshot("search-light");
 
     // ── Token bucket: at most capacity + refill in any 10-second window ──
     const WINDOW_MS = 10_000;
