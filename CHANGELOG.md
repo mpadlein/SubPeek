@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-23
+
 ### Added
 
 - "Only show my languages" switch on search results and channel Videos tabs.
@@ -21,6 +23,15 @@ follow [Semantic Versioning](https://semver.org/).
   on top of the existing concurrency limit and rate-limit backoff.
 - Lookups for thumbnails that scrolled away or were recycled before their
   turn came are skipped instead of sent.
+
+### Fixed
+
+- Badges did not follow a change in the order of the favorite languages
+  until the page was reloaded; they are now re-sorted on every change.
+- Rows in the notifications dropdown (the bell) got a badge over the channel
+  avatar; they are video links but not video cards, so they are skipped now.
+- The settings page is centred when it opens in a tab (from the gear button
+  in the track popup or the "Choose languages" button next to the filter).
 
 ## [1.1.0] - 2026-09-16
 
@@ -52,6 +63,7 @@ First release on the Chrome Web Store.
 - Settings popup to choose favorite languages.
 - No data collection; the extension only talks to youtube.com.
 
-[Unreleased]: https://github.com/mpadlein/SubPeek/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/mpadlein/SubPeek/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/mpadlein/SubPeek/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/mpadlein/SubPeek/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mpadlein/SubPeek/releases/tag/v1.0.0

@@ -2,7 +2,7 @@
 
 A Chrome/Firefox browser extension that shows which YouTube videos have captions (subtitles) and dubbed audio tracks in your languages, right on the thumbnail - before you click.
 
-**[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/cnkfniefdmiiphamafjjeengnjpkfeea?utm_source=github-readme)** - Firefox Add-ons: coming soon
+**[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/cnkfniefdmiiphamafjjeengnjpkfeea?utm_source=github-readme)** - **[Install from Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/subpeek/)**
 
 ![SubPeek label on a YouTube thumbnail: captions in EN, ES, FR plus 22 more languages; dubbed audio in ES, FR plus 19 more](store-assets/screenshots/screenshot-1-1280x800.png)
 
@@ -33,7 +33,7 @@ Found a bug or have an idea? Use the [feedback form](https://docs.google.com/for
 ## Install
 
 - Chrome Web Store: [SubPeek - Caption & Dub Labels for YouTube](https://chromewebstore.google.com/detail/cnkfniefdmiiphamafjjeengnjpkfeea?utm_source=github-readme) (also works in Edge and other Chromium browsers)
-- Firefox Add-ons (AMO): coming soon
+- Firefox Add-ons: [SubPeek - Caption & Dub Labels for YouTube](https://addons.mozilla.org/en-US/firefox/addon/subpeek/)
 
 ## Development
 
