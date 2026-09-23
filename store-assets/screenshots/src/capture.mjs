@@ -204,6 +204,10 @@ try {
     // 2. Settings page captures (collapsed, then with the language dropdown open).
     await page.navigate(`chrome-extension://${extId}/popup.html`);
     await page.waitFor(`!!document.querySelector('.language-tag')`, 10000);
+    // The version label is the one thing left out: it would date the slide
+    // with every release. lit-html keeps the node across re-renders, so the
+    // inline style survives the dropdown click below.
+    await page.evaluate(`document.querySelector('.version').style.display = 'none'`);
     await sleep(400);
     let r = await page.rect(`document.body`);
     manifest.pages.settings = r;

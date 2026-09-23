@@ -1,43 +1,82 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8" />
-<title>SubPeek slide 1</title>
-<link rel="stylesheet" href="base.css" />
-<style>
-    h1 { left: 72px; top: 96px; width: 520px; }
-    .lead { left: 72px; top: 318px; width: 420px; }
-    .thumb { left: 616px; top: 104px; width: 592px; height: 332px; border-radius: 14px; }
-    .thumb img { width: 592px; }
-    /* Trim the outer 6 css px on the left and bottom of the 8x crop so the
-       thumbnail's rounded corner does not show as a black wedge. */
-    .loupe { left: 460px; top: 470px; width: 700px; height: 286px; }
-    .loupe img { position: absolute; width: 714px; left: -24px; top: -8px; }
-</style>
+    <meta charset="utf-8" />
+    <title>SubPeek slide 1</title>
+    <link rel="stylesheet" href="base.css" />
+    <style>
+        h1 {
+            left: 72px;
+            top: 40px;
+            width: 1000px;
+        }
+
+        /* hero-card.png is a 500 css px search card at 3x, shown at 1012 px
+       (2.024x), flush with the right edge. The badge sits in the card's bottom-left corner, so the card
+       keeps its bottom edge on the slide. */
+        .thumb {
+            left: 268px;
+            top: 192px;
+            width: 1012px;
+            height: 568px;
+            border-radius: 14px;
+        }
+
+        .thumb img {
+            width: 1012px;
+        }
+
+        /* Row centres from badge-geometry.json: the rows sit 232.0 and 260.2 css
+       px below the card's top, times 2.024, plus the card's top. */
+        .callout {
+            right: 1080px;
+            font-size: 30px;
+            text-align: right;
+        }
+
+        .c-cc {
+            top: 643px;
+        }
+
+        .c-dub {
+            top: 700px;
+        }
+    </style>
 </head>
+
 <body>
     <div class="brand">
         <svg viewBox="0 0 128 128" aria-hidden="true">
             <rect x="3" y="3" width="122" height="122" rx="32" fill="#e0202b" stroke="#fff" stroke-width="6" />
-            <circle cx="46" cy="56" r="16" fill="#fff" /><circle cx="82" cy="56" r="16" fill="#fff" />
-            <circle cx="52" cy="57" r="7" fill="#0f0f0f" /><circle cx="88" cy="57" r="7" fill="#0f0f0f" />
+            <circle cx="46" cy="56" r="16" fill="#fff" />
+            <circle cx="82" cy="56" r="16" fill="#fff" />
+            <circle cx="52" cy="57" r="7" fill="#0f0f0f" />
+            <circle cx="88" cy="57" r="7" fill="#0f0f0f" />
             <rect x="18" y="62" width="92" height="46" rx="15" fill="#0f0f0f" />
-            <rect x="30" y="76" width="68" height="9" rx="4.5" fill="#fff" /><rect x="30" y="91" width="68" height="9" rx="4.5" fill="#fff" />
+            <rect x="30" y="76" width="68" height="9" rx="4.5" fill="#fff" />
+            <rect x="30" y="91" width="68" height="9" rx="4.5" fill="#fff" />
         </svg>
         <span>SubPeek</span>
     </div>
 
-    <h1>See captions and dubs before you click.</h1>
-    <p class="lead">Every YouTube thumbnail gets a label with the subtitle and audio languages it offers.</p>
+    <h1>See caption and dub languages<br />on YouTube thumbnails</h1>
 
     <div class="panel thumb"><img src="../captures/hero-card.png" alt="" /></div>
 
-    <svg class="overlay" viewBox="0 0 1280 800">
-        <rect x="618" y="357" width="194" height="77" rx="9" stroke="#fff" stroke-width="3" fill="none" />
-        <line x1="618" y1="434" x2="460" y2="472" />
-        <line x1="812" y1="434" x2="1160" y2="472" />
-    </svg>
+    <div class="callout c-cc">Captions</div>
+    <div class="callout c-dub">Dubs</div>
 
-    <div class="loupe"><img src="../captures/badge-8x.png" alt="" /></div>
+    <svg class="overlay" viewBox="0 0 1280 800">
+        <defs>
+            <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="12" refY="7"
+                orient="auto">
+                <path d="M0,0 L14,7 L0,14 z" />
+            </marker>
+        </defs>
+        <line x1="214" y1="662" x2="264" y2="662" marker-end="url(#arrow)" />
+        <line x1="214" y1="719" x2="264" y2="719" marker-end="url(#arrow)" />
+    </svg>
 </body>
+
 </html>

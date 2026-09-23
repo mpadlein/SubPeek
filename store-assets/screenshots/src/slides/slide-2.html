@@ -1,50 +1,82 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8" />
-<title>SubPeek slide 2</title>
-<link rel="stylesheet" href="base.css" />
-<style>
-    h1 { left: 72px; top: 84px; width: 1000px; }
-    /* 8x badge crop is 175.6 x 76.3 css px, shown at 4.67x with the outer
-       6 css px trimmed on the left and bottom (thumbnail corner). */
-    .badge { left: 300px; top: 290px; width: 792px; height: 328px; }
-    .badge img { position: absolute; width: 820px; left: -28px; top: 0; }
-    .c-sub { right: 1018px; top: 384px; text-align: right; }
-    .c-dub { right: 1018px; top: 518px; text-align: right; }
-    .c-yours { left: 524px; top: 178px; width: 300px; text-align: center; }
-    .c-more { left: 796px; top: 178px; width: 300px; text-align: center; }
-    .note { left: 72px; top: 690px; width: 1000px; }
-</style>
+    <meta charset="utf-8" />
+    <title>SubPeek slide 2</title>
+    <link rel="stylesheet" href="base.css" />
+    <style>
+        h1 {
+            left: 72px;
+            top: 40px;
+            width: 1000px;
+        }
+
+        .lead {
+            left: 72px;
+            top: 116px;
+            width: 1000px;
+        }
+
+        .sub {
+            left: 72px;
+            top: 160px;
+            width: 1000px;
+        }
+
+        /* filter-search.png is capture3.mjs's 2x clip of the search results
+           for "psychology" with the switch on, in masthead mode: YouTube's
+           search box, the switch row and the first two cards that stay,
+           1224 x 707 css px. Shown at 1021 / 1224 = 0.834x, the most that
+           keeps both cards' labels above the bottom edge. */
+        .results {
+            left: 72px;
+            top: 210px;
+            width: 1021px;
+            height: 590px;
+        }
+
+        .results img {
+            width: 1021px;
+        }
+
+        /* Square and red so it reads as a mark-up, not as one more rounded
+           YouTube control. */
+        .overlay rect {
+            stroke: #e0202b;
+            stroke-width: 4;
+        }
+    </style>
 </head>
+
 <body>
     <div class="brand">
         <svg viewBox="0 0 128 128" aria-hidden="true">
             <rect x="3" y="3" width="122" height="122" rx="32" fill="#e0202b" stroke="#fff" stroke-width="6" />
-            <circle cx="46" cy="56" r="16" fill="#fff" /><circle cx="82" cy="56" r="16" fill="#fff" />
-            <circle cx="52" cy="57" r="7" fill="#0f0f0f" /><circle cx="88" cy="57" r="7" fill="#0f0f0f" />
+            <circle cx="46" cy="56" r="16" fill="#fff" />
+            <circle cx="82" cy="56" r="16" fill="#fff" />
+            <circle cx="52" cy="57" r="7" fill="#0f0f0f" />
+            <circle cx="88" cy="57" r="7" fill="#0f0f0f" />
             <rect x="18" y="62" width="92" height="46" rx="15" fill="#0f0f0f" />
-            <rect x="30" y="76" width="68" height="9" rx="4.5" fill="#fff" /><rect x="30" y="91" width="68" height="9" rx="4.5" fill="#fff" />
+            <rect x="30" y="76" width="68" height="9" rx="4.5" fill="#fff" />
+            <rect x="30" y="91" width="68" height="9" rx="4.5" fill="#fff" />
         </svg>
         <span>SubPeek</span>
     </div>
 
-    <h1>How to read the label.</h1>
+    <h1>Filter by language</h1>
+    <p class="lead">Show only videos with captions or dubs in your languages</p>
+    <p class="sub">(Search results and channel pages only)</p>
 
-    <div class="panel badge"><img src="../captures/badge-8x.png" alt="" /></div>
+    <div class="panel results"><img src="../captures/filter-search.png" alt="" /></div>
 
-    <div class="callout c-sub">Subtitles</div>
-    <div class="callout c-dub">Dubbed audio</div>
-    <div class="callout c-yours">Your languages<small>only the ones this video has</small></div>
-    <div class="callout c-more">22 more languages<small>also available on this video</small></div>
-
+    <!-- Highlight around the switch and its count: in the clip they span css
+         x 44..364, y 60..94 (the switch row's top and height come from
+         q-psychology-geometry.json, the horizontal extent from the capture),
+         scaled by 0.834 and offset to the panel, with 7 px of padding. -->
     <svg class="overlay" viewBox="0 0 1280 800">
-        <line x1="274" y1="401" x2="338" y2="401" /><circle cx="342" cy="401" r="5" />
-        <line x1="274" y1="535" x2="338" y2="535" /><circle cx="342" cy="535" r="5" />
-        <line x1="674" y1="262" x2="674" y2="340" /><circle cx="674" cy="344" r="5" />
-        <line x1="946" y1="262" x2="946" y2="340" /><circle cx="946" cy="344" r="5" />
+        <rect x="102" y="253" width="281" height="42" />
     </svg>
-
-    <p class="note">Auto-generated captions and the video's original audio track are not counted.</p>
 </body>
+
 </html>

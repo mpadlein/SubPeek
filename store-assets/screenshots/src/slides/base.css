@@ -25,11 +25,12 @@ body {
     text-rendering: geometricPrecision;
 }
 
-/* Signature, top right. The icon keeps its own red and gets a white ring so
-   it reads at this size. */
+/* Signature, top right, on the same row as the title (centred on its first
+   line) so it takes no vertical space of its own. The icon keeps its own red
+   and gets a white ring so it reads at this size. */
 .brand {
     position: absolute;
-    top: 44px;
+    top: 57px;
     right: 72px;
     display: flex;
     align-items: center;
@@ -78,21 +79,6 @@ h1 {
     display: block;
 }
 
-/* Magnifier: the badge blown up, white ring, sitting over the canvas. */
-.loupe {
-    position: absolute;
-    border-radius: 18px;
-    border: 5px solid #fff;
-    overflow: hidden;
-    background: #0f0f0f;
-    box-shadow:
-        0 30px 70px rgba(0, 0, 0, 0.6),
-        0 4px 14px rgba(0, 0, 0, 0.4);
-}
-.loupe img {
-    display: block;
-}
-
 /* Leader lines for callouts are drawn in one SVG overlay per slide. */
 .overlay {
     position: absolute;
@@ -102,14 +88,17 @@ h1 {
     pointer-events: none;
 }
 .overlay line,
-.overlay path {
+.overlay path,
+.overlay rect {
     stroke: #fff;
     stroke-width: 3;
     fill: none;
     stroke-linecap: round;
 }
-.overlay circle {
+.overlay circle,
+.overlay marker path {
     fill: #fff;
+    stroke: none;
 }
 
 .callout {
@@ -120,17 +109,18 @@ h1 {
 }
 .callout small {
     display: block;
-    font-size: 21px;
+    font-size: 24px;
     font-weight: 400;
     color: rgba(255, 255, 255, 0.82);
     margin-top: 4px;
 }
 
-.note {
+/* Second, quieter line under a lead. */
+.sub {
     position: absolute;
-    font-size: 22px;
+    font-size: 24px;
     line-height: 1.35;
-    color: rgba(255, 255, 255, 0.82);
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .checks {
