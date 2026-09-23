@@ -12,6 +12,8 @@ follow [Semantic Versioning](https://semver.org/).
   While it is on, videos with no caption or dubbed audio in your favorite
   languages are hidden and a count next to the switch says how many. It
   reuses the lookups the badges already make, so it costs no extra requests.
+  With no favorite languages the switch is disabled and a "Choose languages"
+  button next to it opens the settings.
 
 ### Changed
 

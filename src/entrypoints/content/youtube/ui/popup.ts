@@ -10,23 +10,13 @@ import {
     logoTemplate,
     svgIconTemplate,
 } from "@/common/icons";
-import { messaging } from "@/common/messaging";
 import { Settings } from "@/common/settings";
 import type { TrackItem } from "@/common/types";
 import { CSS } from "../../constants";
 import { sortByFavorite } from "../tracks";
+import { openOptionsPage } from "./options";
 
 // ─── Templates ──────────────────────────────────────────────────────
-
-function openOptionsPage(e: Event): void {
-    e.preventDefault();
-    e.stopPropagation();
-    // runtime.openOptionsPage() is not exposed to content scripts - the
-    // background script opens it for us.
-    messaging.openOptionsPage().catch((error) => {
-        logger.error("Could not open options page:", error);
-    });
-}
 
 // This popup only exists while SubPeek is on, so the button can only ever
 // turn it off; the toolbar popup is the way back, which the tooltip says.

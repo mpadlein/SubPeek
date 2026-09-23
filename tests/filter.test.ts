@@ -74,7 +74,7 @@ describe("filterable pages", () => {
         "/c/SomeName/videos",
         "/user/someone/videos",
     ])("mounts the switch on %s", async (path) => {
-        const { stopFilter } = await loadFilter([], {
+        const { stopFilter } = await loadFilter(["en"], {
             path,
             page: BOTH_HEADERS,
         });
@@ -91,7 +91,7 @@ describe("filterable pages", () => {
         "/@handle/videos/extra",
         "/feed/subscriptions",
     ])("leaves %s alone", async (path) => {
-        const { stopFilter } = await loadFilter([], {
+        const { stopFilter } = await loadFilter(["en"], {
             path,
             page: BOTH_HEADERS,
         });
@@ -503,5 +503,93 @@ describe("restoring cards", () => {
 
         expect(document.querySelector(`[${STATE_ATTR}]`)).toBeNull();
         expect(filtering()).toBe(false);
+    });
+});
+
+describe("with no favorite languages", () => {
+    const action = () =>
+        document.querySelector<HTMLButtonElement>(".ytbext-filter__action");
+    const count = () => document.querySelector(".ytbext-filter__count");
+
+    it("mounts the switch disabled, with a way to choose languages", async () => {
+        const { stopFilter } = await loadFilter([]);
+
+        expect(switchInput()!.disabled).toBe(true);
+        expect(control()!.classList.contains("ytbext-filter--disabled")).toBe(
+            true,
+        );
+        expect(control()!.title).toMatch(/choose/i);
+        expect(action()!.textContent.trim()).toBe("Choose languages");
+        expect(count()!.textContent.trim()).toBe("");
+        stopFilter();
+    });
+
+    it("cannot be turned on", async () => {
+        const { stopFilter } = await loadFilter([]);
+
+        toggleSwitch();
+
+        expect(switchInput()!.checked).toBe(false);
+        expect(filtering()).toBe(false);
+        stopFilter();
+    });
+
+    it("asks the background script to open the options page", async () => {
+        const { stopFilter } = await loadFilter([]);
+        const received = vi.fn();
+        fakeBrowser.runtime.onMessage.addListener(received);
+
+        action()!.click();
+
+        await vi.waitFor(() => {
+            expect(received).toHaveBeenCalledWith(
+                { type: "openOptionsPage" },
+                expect.anything(),
+                expect.anything(),
+            );
+        });
+        stopFilter();
+    });
+
+    it("comes to life once a language is chosen", async () => {
+        const { stopFilter } = await loadFilter([]);
+
+        await fakeBrowser.storage.local.set({ "SETTINGS:langCodes": ["en"] });
+
+        expect(switchInput()!.disabled).toBe(false);
+        expect(control()!.classList.contains("ytbext-filter--disabled")).toBe(
+            false,
+        );
+        expect(action()).toBeNull();
+        toggleSwitch();
+        expect(filtering()).toBe(true);
+        stopFilter();
+    });
+
+    it("turns off and shows every card when the last favorite is removed", async () => {
+        const { applyCardFilter, stopFilter } = await loadFilter(["en"]);
+        const [, fr] = mountedCard("fr1");
+        toggleSwitch();
+        applyCardFilter(fr, withCaption("fr"));
+        expect(hiddenIds()).toEqual(["fr1"]);
+
+        await fakeBrowser.storage.local.set({ "SETTINGS:langCodes": [] });
+
+        expect(hiddenIds()).toEqual([]);
+        expect(filtering()).toBe(false);
+        expect(switchInput()!.checked).toBe(false);
+        expect(switchInput()!.disabled).toBe(true);
+        expect(action()).not.toBeNull();
+        stopFilter();
+    });
+
+    it("stops following the favorites once stopped", async () => {
+        const { stopFilter } = await loadFilter([]);
+        stopFilter();
+        document.body.innerHTML = SEARCH_HEADER;
+
+        await fakeBrowser.storage.local.set({ "SETTINGS:langCodes": ["en"] });
+
+        expect(control()).toBeNull();
     });
 });

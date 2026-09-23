@@ -2,8 +2,10 @@ import { logoTemplate } from "@/common/icons";
 import { Settings } from "@/common/settings";
 import type { VideoInfo } from "@/common/types";
 import { html, nothing, render } from "lit-html";
+import { classMap } from "lit-html/directives/class-map.js";
 import { CSS, CSS_PREFIX } from "../constants";
 import { hasFavoriteTrack } from "./tracks";
+import { openOptionsPage } from "./ui/options";
 import { rerenderEmbeds } from "./ui/rerender";
 
 // "Only show my languages": a switch in the header of search results
@@ -77,12 +79,19 @@ const HIDDEN_SELECTOR = `[${STATE_ATTR}="hidden"]`;
 const NAVIGATE_EVENT = "yt-navigate-finish";
 const LABEL = "Only show my languages";
 const TITLE = "Hide videos without captions or dubbed audio in your languages";
+// With no favorite languages there is nothing to filter by (every card would
+// hide), so the switch is disabled and a button opens the settings instead.
+const DISABLED_TITLE = "Choose your favorite languages first";
+const NO_FAVORITES_HINT = "No favorite languages yet.";
+const CHOOSE_LABEL = "Choose languages";
+const CHOOSE_TITLE = "Open SubPeek settings in a new tab";
 
 /** The wrapper placed into the page: the switch and the hidden count. */
 let host: HTMLDivElement | null = null;
 /** The element `host` was placed against, to spot a header being reused. */
 let anchor: Element | null = null;
 let started = false;
+let unsubscribeFavorites: (() => void) | null = null;
 let filterOn = false;
 /** Cards hidden right now, shown next to the switch. */
 let hiddenCount = 0;
@@ -90,6 +99,10 @@ let countUpdateQueued = false;
 
 function placementFor(pathname: string): Placement | null {
     return PLACEMENTS.find((p) => p.path.test(pathname)) ?? null;
+}
+
+function hasFavorites(): boolean {
+    return Settings.langCodes.get().length > 0;
 }
 
 function cardOf(container: HTMLElement): HTMLElement | null {
@@ -189,7 +202,10 @@ function queueCountUpdate(): void {
 
 // Every embed re-applies the filter to its card as part of rendering, so a
 // toggle is a re-render of every embed (rerenderEmbeds()), not a DOM scan.
-function setFilterOn(on: boolean): void {
+// Without favorites the switch is disabled, but the guard here also covers
+// a favorites change that arrives while it is on.
+function setFilterOn(wanted: boolean): void {
+    const on = wanted && hasFavorites();
     if (filterOn === on) return;
     filterOn = on;
     document.documentElement.classList.toggle(CSS.FILTERING, on);
@@ -205,24 +221,41 @@ function setFilterOn(on: boolean): void {
     rerenderEmbeds();
 }
 
+// Favorites change from the settings popup, another tab or the in-page track
+// popup; losing the last one while the switch is on turns it off, and the
+// host re-renders either way so the switch is enabled exactly when there is
+// something to filter by.
+function onFavoritesChange(): void {
+    if (!hasFavorites()) setFilterOn(false);
+    renderHost();
+}
+
 // The checkbox stays in the DOM (visually hidden by the SCSS) so it keeps
 // keyboard focus and the role=switch semantics; the track is the visual. The
 // count span is always rendered and has text only while the switch is on: a
 // live region announces changes, not its own arrival, so it must exist
 // before the first "0 hidden". That first value shows as soon as the switch
 // is on, so the user can see the filter is active before anything is hidden.
+// With no favorites the switch is disabled and a hint plus a button that
+// opens the settings page follow it, since the count would never show.
 function hostTemplate() {
+    const enabled = hasFavorites();
     const onChange = (e: Event) => {
         setFilterOn((e.target as HTMLInputElement).checked);
     };
+    const classes = { [CSS.FILTER]: true, [CSS.FILTER_DISABLED]: !enabled };
     return html`
-        <label class="${CSS.FILTER}" title="${TITLE}">
+        <label
+            class=${classMap(classes)}
+            title=${enabled ? TITLE : DISABLED_TITLE}
+        >
             <span class="${CSS.FILTER_LOGO}">${logoTemplate(16)}</span>
             <span class="${CSS.FILTER_LABEL}">${LABEL}</span>
             <input
                 type="checkbox"
                 role="switch"
                 class="${CSS.FILTER_INPUT}"
+                ?disabled=${!enabled}
                 .checked=${filterOn}
                 @change=${onChange}
             />
@@ -231,6 +264,17 @@ function hostTemplate() {
         <span class="${CSS.FILTER_COUNT}" aria-live="polite">
             ${filterOn ? `${hiddenCount} hidden` : nothing}
         </span>
+        ${enabled
+            ? nothing
+            : html`<span class="${CSS.FILTER_HINT}">${NO_FAVORITES_HINT}</span
+                  ><button
+                      type="button"
+                      class="${CSS.FILTER_ACTION}"
+                      title=${CHOOSE_TITLE}
+                      @click=${openOptionsPage}
+                  >
+                      ${CHOOSE_LABEL}
+                  </button>`}
     `;
 }
 
@@ -289,6 +333,7 @@ export function startFilter(): void {
     if (started) return;
     started = true;
     document.addEventListener(NAVIGATE_EVENT, onNavigate);
+    unsubscribeFavorites = Settings.langCodes.subscribe(onFavoritesChange);
     onNavigate();
 }
 
@@ -296,6 +341,8 @@ export function stopFilter(): void {
     if (!started) return;
     started = false;
     document.removeEventListener(NAVIGATE_EVENT, onNavigate);
+    unsubscribeFavorites?.();
+    unsubscribeFavorites = null;
     setFilterOn(false);
     clearAllCards();
     unmountHost();

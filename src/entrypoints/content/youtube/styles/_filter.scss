@@ -142,9 +142,11 @@ $search-column-max-width: 1250px;
     }
 
     // "N hidden", next to the switch while it is on ("0 hidden" included);
-    // the span stays in place, empty, while it is off.
-    &__count {
-        margin-left: $spacing-sm;
+    // the span stays in place, empty, while it is off. The hint shares its
+    // look: "No favorite languages yet." in the same spot while the switch
+    // is disabled.
+    &__count,
+    &__hint {
         color: $light-color-text-muted;
         font-family: $font-stack;
         font-size: 13px;
@@ -152,6 +154,69 @@ $search-column-max-width: 1250px;
 
         html[dark] & {
             color: $color-text-muted;
+        }
+    }
+
+    &__count {
+        margin-left: $spacing-sm;
+    }
+
+    &__hint {
+        margin-left: $spacing-xs;
+    }
+
+    // No favorite languages: nothing to filter by, so the switch is greyed
+    // out and does not react to hover. The input carries `disabled`, which
+    // is what stops clicks and keyboard focus; this is only the look.
+    &--disabled {
+        cursor: not-allowed;
+
+        &:hover {
+            background: $light-bg-item;
+            border-color: $light-border;
+        }
+
+        html[dark] &:hover {
+            background: $bg-item;
+            border-color: $border-light;
+        }
+    }
+
+    &--disabled &__label,
+    &--disabled &__track {
+        opacity: 0.5;
+    }
+
+    // "Choose languages", after the hint: a button styled as a link, so it
+    // reads as "go somewhere" rather than as one more control in the row.
+    &__action {
+        margin-left: $spacing-xs;
+        padding: 0;
+        border: 0;
+        border-radius: $radius-sm;
+        background: none;
+        color: $light-color-primary;
+        font-family: $font-stack;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &:hover {
+            text-decoration: underline;
+        }
+
+        &:focus-visible {
+            outline: 2px solid $light-color-primary;
+            outline-offset: 2px;
+        }
+
+        html[dark] & {
+            color: $color-primary;
+
+            &:focus-visible {
+                outline-color: $color-primary;
+            }
         }
     }
 }

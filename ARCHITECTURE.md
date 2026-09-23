@@ -52,6 +52,7 @@ src/
         ui/embed.ts               # Badge container and rendering
         ui/rerender.ts            # rerenderEmbeds(): asks every embed to redraw
         ui/popup.ts               # In-page track popup
+        ui/options.ts             # openOptionsPage(): the background opens the settings page
         styles/                   # SCSS for everything the content script draws
     popup/
       index.html, style.css       # Toolbar popup, also registered as the options page
@@ -158,7 +159,8 @@ A service worker that owns the IndexedDB video cache and runs
 `cleanExpired()` at startup. It handles three messages: get a cached video,
 store one, and `openOptionsPage`. The last exists because content scripts
 cannot call `runtime.openOptionsPage()` themselves, so the gear button in the
-in-page popup routes through here. In dev builds it patches
+in-page popup and the "Choose languages" button next to the language filter
+route through here (`ui/options.ts`). In dev builds it patches
 `browser.tabs.reload` to a no-op so WXT's reloads do not restart YouTube tabs.
 
 ### Settings popup and options page (`popup/`)
@@ -373,6 +375,20 @@ toolbar popup already uses one.
   off again (showing every card), removes the switch and mounts a fresh one
   if the new page is filterable. `stopFilter()` turns it off and removes the
   switch. State is not persisted: the switch is the only source of truth.
+- With no favorite languages there is nothing to filter by, and the rule
+  above would hide every card. The switch is then rendered `disabled` (with
+  the `ytbext-filter--disabled` look), its tooltip says to choose languages
+  first, and in place of the count a "No favorite languages yet." hint is
+  followed by a "Choose languages" button that opens the settings page
+  through the background script, because a user who has not found the
+  toolbar icon has no other way there. `setFilterOn(true)` refuses without
+  favorites, so no path turns the filter on. `filter.ts` subscribes to
+  `Settings.langCodes` in `startFilter()` (dropped in `stopFilter()`):
+  losing the last favorite while the switch is on turns it off, which shows
+  every card, and any change re-renders the host so the switch is enabled
+  exactly when the list is not empty. The last favorite can go from the
+  in-page track popup on the same page, so this is not a corner case only
+  the toolbar popup reaches.
 - The card to hide is the closest `ytd-rich-item-renderer`,
   `ytd-video-renderer` or `yt-lockup-view-model`, outermost first, because on
   a channel grid the lockup sits inside a rich item and hiding only the
@@ -478,7 +494,8 @@ Three layers, from fastest to slowest:
    under fake timers and in-flight de-duplication), `sortByFavorite()` and
    `hasFavoriteTrack()`, the settings wrapper, the message protocol, the
    cache TTL and its schema upgrade, badge rendering, re-sorting and card
-   hiding, the filter switch (placement, navigation reset, restore on stop),
+   hiding, the filter switch (placement, navigation reset, restore on stop,
+   disabled without favorites and turned off when the last one goes),
    thumbnail tracking (the pending mark on tracked cards only, kept on a known card, reset on recycle), the in-page
    track popup, the language search and sort, and the settings popup
    rendered end to end. Modules with state (settings, cache,

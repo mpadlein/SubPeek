@@ -42,6 +42,11 @@ export const CSS = {
     FILTER_INPUT: `${CSS_PREFIX}-filter__input`,
     FILTER_TRACK: `${CSS_PREFIX}-filter__track`,
     FILTER_COUNT: `${CSS_PREFIX}-filter__count`,
+    // No favorite languages: the switch is disabled, a hint and a button that
+    // opens the settings page take the place of the count
+    FILTER_DISABLED: `${CSS_PREFIX}-filter--disabled`,
+    FILTER_HINT: `${CSS_PREFIX}-filter__hint`,
+    FILTER_ACTION: `${CSS_PREFIX}-filter__action`,
     // On the root element while the switch is on
     FILTERING: `${CSS_PREFIX}-filtering`,
 
