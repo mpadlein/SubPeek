@@ -11,6 +11,10 @@ const WATCH_LINK_SELECTOR = 'a[href^="/watch?"]';
 // YouTube renders a blurred copy of some thumbnails as a backdrop; skip those.
 const THUMBNAIL_IMG_SELECTOR = ":not(.ytThumbnailViewModelBlurredImage) > img";
 const THUMBNAIL_SELECTOR = `${WATCH_LINK_SELECTOR} ${THUMBNAIL_IMG_SELECTOR}`;
+// Hosts whose images sit in a watch link without being video cards. A
+// notification row (the bell dropdown) is one watch link around the channel
+// avatar and the video thumbnail, and a badge belongs on neither.
+const SKIPPED_HOST_SELECTOR = "ytd-notification-renderer";
 
 const PROCESSED_ATTR = `data-${CSS_PREFIX}-processed`;
 const isProcessed = (img: HTMLImageElement) => img.hasAttribute(PROCESSED_ATTR);
@@ -109,7 +113,11 @@ function mountOverlay(img: HTMLImageElement): void {
     srcObserver.observe(img, { attributes: true, attributeFilter: ["src"] });
 }
 
-/** Thumbnail <img>s inside `root`, plus `root` itself when it is one. */
+/**
+ * Thumbnail <img>s inside `root`, plus `root` itself when it is one. Checked
+ * with closest() rather than in the selector because `root` may itself sit
+ * inside a skipped host: YouTube fills a notification row in after adding it.
+ */
 function findThumbnailImgs(root: ParentNode): HTMLImageElement[] {
     const imgs = Array.from(
         root.querySelectorAll<HTMLImageElement>(THUMBNAIL_SELECTOR),
@@ -117,7 +125,7 @@ function findThumbnailImgs(root: ParentNode): HTMLImageElement[] {
     if (root instanceof HTMLImageElement && root.matches(THUMBNAIL_SELECTOR)) {
         imgs.push(root);
     }
-    return imgs;
+    return imgs.filter((img) => !img.closest(SKIPPED_HOST_SELECTOR));
 }
 
 // ─── Public API ──────────────────────────────────────────────────────

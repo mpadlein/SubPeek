@@ -96,8 +96,11 @@ immediately and later toggles from the popup or any other tab are followed.
 
 - **`thumbnails.ts`** - `trackThumbnailsIn(root)` finds thumbnail `<img>`s
   inside `a[href^="/watch?"]` anchors (the blurred backdrop copies YouTube
-  renders under `.ytThumbnailViewModelBlurredImage` are skipped) and marks
-  each with `data-ytbext-processed` so it is handled once. An
+  renders under `.ytThumbnailViewModelBlurredImage` are skipped, and so is
+  everything inside `ytd-notification-renderer`: a row in the bell dropdown
+  is one watch link around the channel avatar and the video thumbnail, and
+  neither is a video card) and marks each with `data-ytbext-processed` so it
+  is handled once. An
   `IntersectionObserver` calls `mountOverlay()` directly once the thumbnail is
   visible. There are deliberately no per-image event listeners: `stop()` could
   not remove them, and a stale one would double-mount after a stop/start
