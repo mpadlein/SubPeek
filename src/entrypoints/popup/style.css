@@ -93,8 +93,23 @@ body {
     max-width: 340px;
 }
 
+/* ===== Options page ===== */
+/* The same document opens in a tab as the options page. The toolbar popup's
+   viewport is never wider than the 340px body, so a wider viewport means a
+   tab: centre the column there. The top offset is fixed rather than a
+   vertical centre so the page does not jump when the language dropdown
+   opens below the search box. */
+@media (min-width: 400px) {
+    body {
+        margin: 10vh auto;
+    }
+}
+
 /* ===== App Container ===== */
+/* Positioned because the favorites context menu places itself with
+   coordinates relative to this box. */
 #app {
+    position: relative;
     padding: var(--spacing-lg);
     display: flex;
     flex-direction: column;

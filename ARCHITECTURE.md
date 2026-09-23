@@ -166,7 +166,14 @@ in-page popup routes through here. In dev builds it patches
 The toolbar popup is the settings UI: favorite languages plus the on/off
 switch (a `role="switch"` checkbox) in the header. `wxt.config.ts` registers
 the same page as `options_ui` (opened in a tab) so the in-page gear button has
-something to open.
+something to open. In a tab the 340px column is centred horizontally with a
+fixed offset from the top (`margin: 10vh auto` in `style.css`); a vertical
+centre would make the page jump whenever the language dropdown opens below
+the search box. The two contexts are told apart by a `min-width: 400px` media
+query, since the toolbar popup's viewport is never wider than the body. `#app`
+is `position: relative` because the favorites context menu positions itself
+with coordinates relative to that box; without it the menu lined up only
+while `#app` sat at the page origin.
 
 `main.ts` re-renders the whole app through `renderApp()`. Each section
 (`language-dropdown.ts`, `favorited-languages.ts`) is a factory that takes a
